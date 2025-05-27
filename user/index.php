@@ -7,63 +7,86 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(to right, #121212, #3a3a3a);
-      color: #f0f0f0;
-    }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(to right, #121212, #3a3a3a);
+    color: #f0f0f0;
+  }
 
-    .dashboard-wrapper {
-      max-width: 1400px;
-      margin: 50px auto;
-      padding: 30px;
-      background-color: #1e1e1e;
-      border-radius: 16px;
-      box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
-    }
+  .dashboard-wrapper {
+    max-width: 1400px;
+    margin: 50px auto;
+    padding: 30px;
+    background-color: #1e1e1e;
+    border-radius: 16px;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+  }
 
-    .card-custom {
-      background: #2c2c2c;
-      border: none;
-      border-radius: 16px;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-      color: #fff;
-    }
+  .card-custom {
+    background: #2c2c2c;
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    color: #fff;
+  }
 
-    .card-custom h5 {
-      color: #fff;
-    }
+  .card-custom h5 {
+    color: #fff;
+  }
 
-    .section-title {
-      margin-bottom: 20px;
-      font-weight: 600;
-    }
+  .section-title {
+    margin-bottom: 20px;
+    font-weight: 600;
+  }
 
-    .stat-box {
-      background: #3c3c3c;
-      border-radius: 12px;
-      padding: 20px;
-      text-align: center;
-    }
+  .stat-box {
+    background: #3c3c3c;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    transition: background-color 0.3s ease, transform 0.3s ease, color 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+  }
 
-    .stat-box h3 {
-      font-size: 28px;
-      margin-bottom: 5px;
-      color: #0dcaf0;
-    }
+  .stat-box h3 {
+    font-size: 28px;
+    margin-bottom: 5px;
+    color: #0dcaf0;
+    transition: color 0.3s ease;
+  }
 
-    .stat-box p {
-      margin: 0;
-      font-size: 14px;
-      color: #aaa;
-    }
+  .stat-box p {
+    margin: 0;
+    font-size: 14px;
+    color: #aaa;
+    transition: color 0.3s ease;
+  }
 
-    .list-group-item {
-      border: none;
-    }
-  </style>
+  .stat-box i {
+    color: #0dcaf0;
+    transition: color 0.3s ease;
+  }
+
+  .stat-box:hover {
+    background-color: #0dcaf0;
+    transform: translateY(-5px);
+  }
+
+  .stat-box:hover h3,
+  .stat-box:hover p,
+  .stat-box:hover i {
+    color: #000 !important;
+  }
+
+  .list-group-item {
+    border: none;
+  }
+</style>
+
+
 </head>
 <body>
 
