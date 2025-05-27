@@ -1,9 +1,9 @@
 <?php
 include_once(__DIR__ . '/load-env.php');
 
-$servername = getenv('DB_HOST');
-$username = getenv('DB_USER');
-$password = getenv('DB_PASS');
+$servername = "localhost";
+$username = "root";
+$password = "";
 
 try {
   $conn = new PDO("mysql:host=$servername; dbname=playtech", $username, $password);
