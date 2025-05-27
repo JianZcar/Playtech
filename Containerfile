@@ -1,6 +1,6 @@
-FROM php:apache
+FROM php:apache AS base
 
-# Install required PHP extensions for Adminer and MySQL
+# Install required PHP extensions for MySQL
 RUN docker-php-ext-install mysqli pdo pdo_mysql
 
 # Optional but good: enable $_ENV and getenv()
@@ -9,9 +9,21 @@ RUN echo "variables_order = \"EGPCS\"" > /usr/local/etc/php/conf.d/99-env.ini
 # Copy your website files
 COPY ./ /var/www/html/
 
-# Download Adminer to /admin/database
-RUN mkdir -p /var/www/html/admin/database \
-    && curl -s -L https://www.adminer.org/latest.php -o /var/www/html/admin/database/index.php
+
+# Use the official phpMyAdmin image as a build stage
+FROM phpmyadmin/phpmyadmin AS phpmyadmin
+
+# Back to base image to copy phpMyAdmin files from phpmyadmin stage
+FROM base
+
+# Create target directory
+RUN mkdir -p /var/www/html/admin/database
+
+# Copy phpMyAdmin files from the phpmyadmin image into your web root
+COPY --from=phpmyadmin /usr/src/phpmyadmin /var/www/html/admin/database
+
+# Set permissions
+RUN chown -R www-data:www-data /var/www/html/admin/database
 
 # Apache config
 RUN { \
