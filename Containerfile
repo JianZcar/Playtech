@@ -1,7 +1,4 @@
-# Stage 1: Use official phpMyAdmin image to get phpMyAdmin files
-FROM phpmyadmin/phpmyadmin:latest AS phpmyadmin_stage
-
-# Stage 2: Build your custom Ubuntu + Apache + PHP + phpMyAdmin container
+# Use Ubuntu 24.04 as base
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -21,23 +18,24 @@ RUN apt-get update && apt-get install -y \
     php-xmlrpc \
     php-soap \
     php-intl \
-    unzip \
     wget \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy phpMyAdmin files from official image
-COPY --from=phpmyadmin_stage /var/www/html /usr/share/phpmyadmin
+# Download Adminer PHP file to /usr/share/adminer
+RUN mkdir -p /usr/share/adminer && \
+    wget "https://github.com/vrana/adminer/releases/download/v5.3.0/adminer-5.3.0.php" -O /usr/share/adminer/adminer.php
 
-# Configure Apache to serve phpMyAdmin at /admin/database
-RUN echo "Alias /admin/database /usr/share/phpmyadmin\n\
-<Directory /usr/share/phpmyadmin>\n\
+# Configure Apache to serve Adminer at /admin/database
+RUN echo "Alias /admin/database /usr/share/adminer\n\
+<Directory /usr/share/adminer>\n\
     Options FollowSymLinks\n\
-    DirectoryIndex index.php\n\
+    DirectoryIndex adminer.php\n\
     AllowOverride All\n\
     Require all granted\n\
-</Directory>" > /etc/apache2/conf-available/phpmyadmin.conf
+</Directory>" > /etc/apache2/conf-available/adminer.conf
 
-RUN a2enconf phpmyadmin
+RUN a2enconf adminer
 RUN a2enmod rewrite
 
 # Copy your PHP app into /var/www/html if needed
