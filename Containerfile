@@ -28,15 +28,6 @@ RUN apt-get update && apt-get install -y \
 # Copy phpMyAdmin files from official image
 COPY --from=phpmyadmin_stage /var/www/html /usr/share/phpmyadmin
 
-# Create minimal phpMyAdmin config
-RUN echo "<?php\n\
-\$cfg['Servers'][1]['host'] = 'playtech-db';\n\
-\$cfg['Servers'][1]['port'] = 3306;\n\
-\$cfg['Servers'][1]['connect_type'] = 'tcp';\n\
-\$cfg['Servers'][1]['auth_type'] = 'cookie';\n\
-\$cfg['ForceSSL'] = false;\n\
-?>" > /usr/share/phpmyadmin/config.inc.php
-
 # Configure Apache to serve phpMyAdmin at /admin/database
 RUN echo "Alias /admin/database /usr/share/phpmyadmin\n\
 <Directory /usr/share/phpmyadmin>\n\
