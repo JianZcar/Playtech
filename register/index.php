@@ -6,69 +6,82 @@
     <title>Register</title>
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body {
-            margin: 0;
-            padding: 40px 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(to right, #8e2de2, #4a00e0);
-        }
+    body {
+        margin: 0;
+        padding: 40px 0;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(to right, #121212, #3a3a3a);
+        color: #f0f0f0;
+    }
 
-        .card-wrapper {
-            max-width: 700px;
-            width: 100%;
-            margin: 0 auto;
-            display: flex;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
-            background-color: white;
-            transform: scale(0.9);
-            transform-origin: top center;
-        }
+    .card-wrapper {
+        max-width: 700px;
+        width: 100%;
+        margin: 0 auto;
+        display: flex;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+        background-color: #1e1e1e;
+        transform: scale(0.9);
+        transform-origin: top center;
+    }
 
-        .left-panel {
-            background: linear-gradient(to bottom right, #6a11cb, #2575fc);
-            color: white;
-            flex: 1;
-            padding: 30px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
+    .left-panel {
+        background: linear-gradient(to bottom right, #2c2c2c, #3a3a3a);
+        color: #f0f0f0;
+        flex: 1;
+        padding: 30px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
 
-        .left-panel h2 {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
+    .left-panel h2 {
+        font-size: 24px;
+        margin-bottom: 10px;
+        color: #0dcaf0;
+    }
 
-        .left-panel p {
-            font-size: 13px;
-        }
+    .left-panel p {
+        font-size: 13px;
+        color: #aaa;
+    }
 
-        .right-panel {
-            flex: 1;
-            padding: 30px;
-        }
+    .right-panel {
+        flex: 1;
+        padding: 30px;
+        background-color: #2c2c2c;
+    }
 
-        .form-control {
-            border-radius: 30px;
-            font-size: 14px;
-            padding: 6px 15px;
-        }
+    .form-control {
+        border-radius: 30px;
+        font-size: 14px;
+        padding: 6px 15px;
+        background-color: #3a3a3a;
+        border: 1px solid #555;
+        color: #f0f0f0;
+    }
 
-        .btn-primary {
-            border-radius: 30px;
-            font-size: 14px;
-            padding: 8px 0;
-            background: linear-gradient(to right, #8e2de2, #4a00e0);
-            border: none;
-        }
+    .form-control::placeholder {
+        color: #aaa;
+    }
 
-        .btn-primary:hover {
-            background: linear-gradient(to right, #4a00e0, #8e2de2);
-        }
-    </style>
+    .btn-primary {
+        border-radius: 30px;
+        font-size: 14px;
+        padding: 8px 0;
+        background: linear-gradient(to right, #0dcaf0, #198754);
+        border: none;
+        color: #fff;
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(to right, #198754, #0dcaf0);
+    }
+</style>
+
 </head>
 <body>
 
