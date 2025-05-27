@@ -1,47 +1,33 @@
-# Use Ubuntu 24.04 as base
-FROM ubuntu:24.04
+FROM php:apache
 
-ENV DEBIAN_FRONTEND=noninteractive
+# Install required PHP extensions for Adminer and MySQL
+RUN docker-php-ext-install mysqli pdo pdo_mysql
 
-# Install Apache, PHP, and dependencies
-RUN apt-get update && apt-get install -y \
-    apache2 \
-    php \
-    php-mysqli \
-    php-json \
-    php-mbstring \
-    php-zip \
-    php-gd \
-    php-curl \
-    php-xml \
-    php-bcmath \
-    php-xmlrpc \
-    php-soap \
-    php-intl \
-    wget \
-    unzip \
-    && rm -rf /var/lib/apt/lists/*
+# Copy your website files
+COPY ./ /var/www/html/
 
-# Download Adminer PHP file to /usr/share/adminer
-RUN mkdir -p /usr/share/adminer && \
-    wget "https://github.com/vrana/adminer/releases/download/v5.3.0/adminer-5.3.0.php" -O /usr/share/adminer/adminer.php
+# Download Adminer to /adminer subdirectory
+RUN mkdir -p /var/www/html/admin/database \
+    && curl -s -L https://www.adminer.org/latest.php -o /var/www/html/admin/database/index.php
 
-# Configure Apache to serve Adminer at /admin/database
-RUN echo "Alias /admin/database /usr/share/adminer\n\
-<Directory /usr/share/adminer>\n\
-    Options FollowSymLinks\n\
-    DirectoryIndex adminer.php\n\
-    AllowOverride All\n\
-    Require all granted\n\
-</Directory>" > /etc/apache2/conf-available/adminer.conf
+# Copy Apache configuration
+RUN { \
+    echo '<VirtualHost *:80>'; \
+    echo '  ServerAdmin webmaster@localhost'; \
+    echo '  DocumentRoot /var/www/html'; \
+    echo; \
+    echo '  <Directory /var/www/html>'; \
+    echo '    Options Indexes FollowSymLinks'; \
+    echo '    AllowOverride All'; \
+    echo '    Require all granted'; \
+    echo '  </Directory>'; \
+    echo; \
+    echo '  ErrorLog ${APACHE_LOG_DIR}/error.log'; \
+    echo '  CustomLog ${APACHE_LOG_DIR}/access.log combined'; \
+    echo '</VirtualHost>'; \
+} > /etc/apache2/sites-available/000-default.conf
 
-RUN a2enconf adminer
-RUN a2enmod rewrite
-
-# Copy your PHP app into /var/www/html if needed
-COPY . /var/www/html/
-
-EXPOSE 80
-
-CMD ["apache2ctl", "-D", "FOREGROUND"]
-
+# Enable Apache modules and set permissions
+RUN a2enmod rewrite headers \
+    && chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html
