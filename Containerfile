@@ -1,8 +1,12 @@
+# Stage 1: Use official phpMyAdmin image to get phpMyAdmin files
+FROM phpmyadmin/phpmyadmin:latest AS phpmyadmin_stage
+
+# Stage 2: Build your custom Ubuntu + Apache + PHP + phpMyAdmin container
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install Apache, PHP, phpMyAdmin dependencies
+# Install Apache, PHP, and dependencies
 RUN apt-get update && apt-get install -y \
     apache2 \
     php \
@@ -21,22 +25,17 @@ RUN apt-get update && apt-get install -y \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Download phpMyAdmin
-RUN mkdir -p /usr/share/phpmyadmin && \
-    wget https://files.phpmyadmin.net/phpMyAdmin/5.2.1/phpMyAdmin-5.2.1-all-languages.zip -O /tmp/phpmyadmin.zip && \
-    unzip /tmp/phpmyadmin.zip -d /usr/share/phpmyadmin && \
-    mv /usr/share/phpmyadmin/phpMyAdmin-5.2.1-all-languages/* /usr/share/phpmyadmin/ && \
-    rm -rf /usr/share/phpmyadmin/phpMyAdmin-5.2.1-all-languages /tmp/phpmyadmin.zip
+# Copy phpMyAdmin files from official image
+COPY --from=phpmyadmin_stage /var/www/html /usr/share/phpmyadmin
 
+# Create minimal phpMyAdmin config
 RUN echo "<?php\n\
-$cfg['Servers'][1]['host'] = 'localhost';\n\
-$cfg['Servers'][1]['socket'] = ''; \n\
-$cfg['ForceSSL'] = false;\n\
-$cfg['Servers'][1]['auth_type'] = 'cookie';\n\
+\$cfg['Servers'][1]['host'] = '127.0.0.1';\n\
+\$cfg['Servers'][1]['port'] = 3306;\n\
+\$cfg['Servers'][1]['connect_type'] = 'tcp';\n\
+\$cfg['Servers'][1]['auth_type'] = 'cookie';\n\
+\$cfg['ForceSSL'] = false;\n\
 ?>" > /usr/share/phpmyadmin/config.inc.php
-
-# Copy your PHP app into /var/www/html
-COPY . /var/www/html/
 
 # Configure Apache to serve phpMyAdmin at /admin/database
 RUN echo "Alias /admin/database /usr/share/phpmyadmin\n\
@@ -49,6 +48,9 @@ RUN echo "Alias /admin/database /usr/share/phpmyadmin\n\
 
 RUN a2enconf phpmyadmin
 RUN a2enmod rewrite
+
+# Copy your PHP app into /var/www/html if needed
+COPY . /var/www/html/
 
 EXPOSE 80
 
