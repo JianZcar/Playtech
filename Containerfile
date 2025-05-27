@@ -28,6 +28,12 @@ RUN mkdir -p /usr/share/phpmyadmin && \
     mv /usr/share/phpmyadmin/phpMyAdmin-5.2.1-all-languages/* /usr/share/phpmyadmin/ && \
     rm -rf /usr/share/phpmyadmin/phpMyAdmin-5.2.1-all-languages /tmp/phpmyadmin.zip
 
+RUN echo "<?php\n\
+$cfg['Servers'][1]['host'] = 'PlaytechDB';\n\
+$cfg['ForceSSL'] = false;\n\
+$cfg['Servers'][1]['auth_type'] = 'cookie';\n\
+?>" > /usr/share/phpmyadmin/config.inc.php
+
 # Copy your PHP app into /var/www/html
 COPY . /var/www/html/
 
