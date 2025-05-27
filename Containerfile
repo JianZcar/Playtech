@@ -3,14 +3,17 @@ FROM php:apache
 # Install required PHP extensions for Adminer and MySQL
 RUN docker-php-ext-install mysqli pdo pdo_mysql
 
+# Optional but good: enable $_ENV and getenv()
+RUN echo "variables_order = \"EGPCS\"" > /usr/local/etc/php/conf.d/99-env.ini
+
 # Copy your website files
 COPY ./ /var/www/html/
 
-# Download Adminer to /adminer subdirectory
+# Download Adminer to /admin/database
 RUN mkdir -p /var/www/html/admin/database \
     && curl -s -L https://www.adminer.org/latest.php -o /var/www/html/admin/database/index.php
 
-# Copy Apache configuration
+# Apache config
 RUN { \
     echo '<VirtualHost *:80>'; \
     echo '  ServerAdmin webmaster@localhost'; \
@@ -31,3 +34,4 @@ RUN { \
 RUN a2enmod rewrite headers \
     && chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html
+
