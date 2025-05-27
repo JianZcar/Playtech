@@ -105,11 +105,15 @@
           <div class="card-body">
             <h5 class="section-title"><i class="bi bi-clock-history"></i> Recent Orders</h5>
             <ul class="list-group list-group-flush">
-              <?php foreach ($recentOrders as $order): ?>
-                <li class="list-group-item bg-transparent text-white">
-                  #<?= $order['id'] ?> - <?= htmlspecialchars($order['status']) ?> - ₱<?= number_format($order['total_price'], 2) ?>
-                </li>
-              <?php endforeach; ?>
+            <?php if ($hasRecentOrders): ?>
+                <?php foreach ($recentOrders as $order): ?>
+                    <li class="list-group-item bg-transparent text-white">
+                        #<?= $order['id'] ?> - <?= $order['status'] ?> - ₱<?= number_format($order['total_price'], 2) ?>
+                    </li>
+                <?php endforeach; ?>
+            <?php else: ?>
+             <li class="list-group-item bg-transparent text-white">No Recent Orders</li>
+            <?php endif; ?>
             </ul>
           </div>
         </div>
@@ -145,11 +149,16 @@
           <div class="card-body">
             <h5 class="section-title"><i class="bi bi-chat-dots"></i> Contact Messages</h5>
             <ul class="list-group list-group-flush">
-              <?php foreach ($contactMessages as $msg): ?>
-                <li class="list-group-item bg-transparent text-white">
-                  "<?= htmlspecialchars($msg['message']) ?>" - <?= date("g:i A", strtotime($msg['date_sent'])) ?>
-                </li>
-              <?php endforeach; ?>
+                <?php if ($hasContactMessages): ?>
+                    <?php foreach ($contactMessages as $msg): ?>
+                    <li class="list-group-item bg-transparent text-white">
+                        "<?= htmlspecialchars($msg['message']) ?>" - <?= date('g:i A', strtotime($msg['date_sent'])) ?>
+                    </li>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <li class="list-group-item bg-transparent text-white">No Contact Messages</li>
+            <?php endif; ?>
+
             </ul>
           </div>
         </div>

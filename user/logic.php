@@ -26,12 +26,13 @@ try {
   $stmt->execute([$userId]);
   $totalSpendings = $stmt->fetchColumn() ?? 0;
 
-  // Recent orders (limit 5)
+  // Recent orders
   $stmt = $conn->prepare("SELECT id, total_price, status FROM orders WHERE user_id = ? ORDER BY order_date DESC LIMIT 5");
   $stmt->execute([$userId]);
   $recentOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+  $hasRecentOrders = count($recentOrders) > 0;
 
-  // Activity log (limit 5, assuming `activity` and `register` columns represent events)
+  // Activity log
   $stmt = $conn->prepare("SELECT activity, register FROM audit_trail WHERE email = ? ORDER BY id DESC LIMIT 5");
   $stmt->execute([$userProfile['email']]);
   $activities = [];
@@ -39,10 +40,11 @@ try {
     $activities[] = $row['activity'] . ' - ' . date('g:i A', strtotime($row['register']));
   }
 
-  // Recent contact messages (limit 5)
+  // Contact messages
   $stmt = $conn->prepare("SELECT message, date_sent FROM contact_messages ORDER BY date_sent DESC LIMIT 5");
   $stmt->execute();
   $contactMessages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+  $hasContactMessages = count($contactMessages) > 0;
 
 } catch (PDOException $e) {
   die("Database error: " . $e->getMessage());
