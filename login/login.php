@@ -6,80 +6,93 @@
   <title>Login</title>
   <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet"/>
   <style>
-    body {
-      margin: 0;
-      padding: 40px 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(to right, #8e2de2, #4a00e0);
-      overflow-x: hidden;
-    }
+  body {
+    margin: 0;
+    padding: 40px 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(to right, #121212, #3a3a3a);
+    overflow-x: hidden;
+    color: #f0f0f0;
+  }
 
+  .card-wrapper {
+    max-width: 800px;
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.35);
+    background-color: #1e1e1e;
+  }
+
+  .left-panel {
+    background: linear-gradient(to bottom right, #2c2c2c, #3a3a3a);
+    color: #f0f0f0;
+    flex: 1;
+    padding: 36px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .left-panel h2 {
+    font-size: 26px;
+    margin-bottom: 10px;
+    color: #0dcaf0;
+  }
+
+  .left-panel p {
+    font-size: 14px;
+    text-align: center;
+    color: #aaa;
+  }
+
+  .right-panel {
+    flex: 1;
+    padding: 36px;
+    background-color: #2c2c2c;
+  }
+
+  .form-control {
+    border-radius: 30px;
+    font-size: 15px;
+    padding: 10px 16px;
+    background-color: #3a3a3a;
+    border: 1px solid #555;
+    color: #f0f0f0;
+  }
+
+  .form-control::placeholder {
+    color: #aaa;
+  }
+
+  .btn-primary {
+    border-radius: 30px;
+    font-size: 15px;
+    padding: 10px 0;
+    background: linear-gradient(to right, #0dcaf0, #198754);
+    border: none;
+    color: #fff;
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(to right, #198754, #0dcaf0);
+  }
+
+  .logo {
+    width: 70px;
+    height: 70px;
+  }
+
+  @media (max-width: 768px) {
     .card-wrapper {
-      max-width: 800px;
-      width: 100%;
-      margin: 0 auto;
-      display: flex;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 0 25px rgba(0, 0, 0, 0.25);
-      background-color: white;
-    }
-
-    .left-panel {
-      background: linear-gradient(to bottom right, #6a11cb, #2575fc);
-      color: white;
-      flex: 1;
-      padding: 36px;
-      display: flex;
       flex-direction: column;
-      justify-content: center;
-      align-items: center;
     }
+  }
+</style>
 
-    .left-panel h2 {
-      font-size: 26px;
-      margin-bottom: 10px;
-    }
-
-    .left-panel p {
-      font-size: 14px;
-      text-align: center;
-    }
-
-    .right-panel {
-      flex: 1;
-      padding: 36px;
-    }
-
-    .form-control {
-      border-radius: 30px;
-      font-size: 15px;
-      padding: 10px 16px;
-    }
-
-    .btn-primary {
-      border-radius: 30px;
-      font-size: 15px;
-      padding: 10px 0;
-      background: linear-gradient(to right, #8e2de2, #4a00e0);
-      border: none;
-    }
-
-    .btn-primary:hover {
-      background: linear-gradient(to right, #4a00e0, #8e2de2);
-    }
-
-    .logo {
-      width: 70px;
-      height: 70px;
-    }
-
-    @media (max-width: 768px) {
-      .card-wrapper {
-        flex-direction: column;
-      }
-    }
-  </style>
 </head>
 <body>
 
