@@ -92,6 +92,9 @@
 
   <div class="container dashboard-wrapper">
     <div class="row mb-4">
+        <div class="mb-2">
+            <h3 class=>Welcome, <strong><?= htmlspecialchars($userProfile['fname']) ?></strong>!</h3>
+        </div>
       <div class="col-md-3">
         <div class="stat-box">
           <i class="bi bi-person-circle fs-2 text-info"></i>
