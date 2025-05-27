@@ -2,7 +2,7 @@
 FROM phpmyadmin/phpmyadmin:latest AS phpmyadmin_stage
 
 # ---------- Stage 2: Setup Apache + PHP + phpMyAdmin ----------
-FROM php:apache
+FROM php:8.2-apache
 
 # Install PHP extensions required by phpMyAdmin
 RUN docker-php-ext-install mysqli pdo pdo_mysql
