@@ -29,6 +29,7 @@ RUN mkdir -p /usr/share/phpmyadmin && \
     rm -rf /usr/share/phpmyadmin/phpMyAdmin-5.2.1-all-languages /tmp/phpmyadmin.zip
 
 RUN echo "<?php\n\
+$cfg['Servers'][1]['host'] = 'PlaytechDB';\n\
 $cfg['ForceSSL'] = false;\n\
 $cfg['Servers'][1]['auth_type'] = 'cookie';\n\
 ?>" > /usr/share/phpmyadmin/config.inc.php
