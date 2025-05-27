@@ -1,10 +1,10 @@
+<?php include 'logic.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>User Dashboard</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <style>
     body {
@@ -59,53 +59,105 @@
       font-size: 14px;
       color: #aaa;
     }
+
+    .list-group-item {
+      border: none;
+    }
   </style>
 </head>
 <body>
 
-<div class="dashboard-wrapper">
-  <h2 class="mb-4 text-center"><i class="bi bi-person-circle"></i> Welcome, User</h2>
-
-  <div class="row g-4 mb-4">
-    <div class="col-md-4">
-      <div class="stat-box">
-        <h3><i class="bi bi-cart-check"></i> 5</h3>
-        <p>Orders Made</p>
+  <div class="container dashboard-wrapper">
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="stat-box">
+          <i class="bi bi-person-circle fs-2 text-info"></i>
+          <h3><?= htmlspecialchars($userProfile['fname'] . ' ' . $userProfile['lname']) ?></h3>
+          <p>User Profile</p>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-box">
+          <i class="bi bi-cart4 fs-2 text-info"></i>
+          <h3><?= $cartCount ?></h3>
+          <p>Items in Cart</p>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-box">
+          <i class="bi bi-bag-check fs-2 text-info"></i>
+          <h3><?= $orderCount ?></h3>
+          <p>Total Orders</p>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-box">
+          <i class="bi bi-currency-dollar fs-2 text-info"></i>
+          <h3><?= number_format($totalSpendings, 2) ?></h3>
+          <p>Total Spendings</p>
+        </div>
       </div>
     </div>
-    <div class="col-md-4">
-      <div class="stat-box">
-        <h3><i class="bi bi-bag-plus"></i> 3</h3>
-        <p>Items in Cart</p>
+
+    <div class="row">
+      <div class="col-md-6 mb-4">
+        <div class="card card-custom">
+          <div class="card-body">
+            <h5 class="section-title"><i class="bi bi-clock-history"></i> Recent Orders</h5>
+            <ul class="list-group list-group-flush">
+              <?php foreach ($recentOrders as $order): ?>
+                <li class="list-group-item bg-transparent text-white">
+                  #<?= $order['id'] ?> - <?= htmlspecialchars($order['status']) ?> - ₱<?= number_format($order['total_price'], 2) ?>
+                </li>
+              <?php endforeach; ?>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 mb-4">
+        <div class="card card-custom">
+          <div class="card-body">
+            <h5 class="section-title"><i class="bi bi-bell"></i> Activity Log</h5>
+            <ul class="list-group list-group-flush">
+              <?php foreach ($activities as $activity): ?>
+                <li class="list-group-item bg-transparent text-white"><?= htmlspecialchars($activity) ?></li>
+              <?php endforeach; ?>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
-    <div class="col-md-4">
-      <div class="stat-box">
-        <h3><i class="bi bi-currency-dollar"></i> 2,500</h3>
-        <p>Total Spent</p>
+
+    <div class="row">
+      <div class="col-md-6 mb-4">
+        <div class="card card-custom">
+          <div class="card-body">
+            <h5 class="section-title"><i class="bi bi-gear"></i> Account Settings</h5>
+            <p class="text-white mb-1">Email: <?= htmlspecialchars($userProfile['email']) ?></p>
+            <p class="text-white mb-3">Mobile: <?= htmlspecialchars($userProfile['mobile']) ?></p>
+            <button class="btn btn-outline-info btn-sm"><i class="bi bi-pencil"></i> Edit Profile</button>
+            <button class="btn btn-outline-danger btn-sm"><i class="bi bi-box-arrow-right"></i> Logout</button>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 mb-4">
+        <div class="card card-custom">
+          <div class="card-body">
+            <h5 class="section-title"><i class="bi bi-chat-dots"></i> Contact Messages</h5>
+            <ul class="list-group list-group-flush">
+              <?php foreach ($contactMessages as $msg): ?>
+                <li class="list-group-item bg-transparent text-white">
+                  "<?= htmlspecialchars($msg['message']) ?>" - <?= date("g:i A", strtotime($msg['date_sent'])) ?>
+                </li>
+              <?php endforeach; ?>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
+
   </div>
 
-  <h4 class="section-title"><i class="bi bi-clock-history"></i> Recent Orders</h4>
-  <div class="card card-custom mb-4">
-    <div class="card-body">
-      <p><i class="bi bi-receipt"></i> Order #1023 - <span class="text-info">Delivered</span></p>
-      <p><i class="bi bi-receipt"></i> Order #1022 - <span class="text-warning">Shipped</span></p>
-      <p><i class="bi bi-receipt"></i> Order #1021 - <span class="text-secondary">Pending</span></p>
-    </div>
-  </div>
-
-  <h4 class="section-title"><i class="bi bi-bag"></i> My Cart</h4>
-  <div class="card card-custom">
-    <div class="card-body">
-      <p><i class="bi bi-box"></i> Product 1 - Qty: 2</p>
-      <p><i class="bi bi-box"></i> Product 2 - Qty: 1</p>
-      <p><i class="bi bi-box"></i> Product 3 - Qty: 4</p>
-    </div>
-  </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
