@@ -30,7 +30,7 @@ COPY --from=phpmyadmin_stage /var/www/html /usr/share/phpmyadmin
 
 # Create minimal phpMyAdmin config
 RUN echo "<?php\n\
-\$cfg['Servers'][1]['host'] = '127.0.0.1';\n\
+\$cfg['Servers'][1]['host'] = 'playtech-db';\n\
 \$cfg['Servers'][1]['port'] = 3306;\n\
 \$cfg['Servers'][1]['connect_type'] = 'tcp';\n\
 \$cfg['Servers'][1]['auth_type'] = 'cookie';\n\
