@@ -30,6 +30,7 @@ RUN mkdir -p /usr/share/phpmyadmin && \
 
 RUN echo "<?php\n\
 $cfg['Servers'][1]['host'] = 'PlaytechDB';\n\
+$cfg['Servers'][1]['socket'] = ''; \n\
 $cfg['ForceSSL'] = false;\n\
 $cfg['Servers'][1]['auth_type'] = 'cookie';\n\
 ?>" > /usr/share/phpmyadmin/config.inc.php
