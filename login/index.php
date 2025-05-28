@@ -176,7 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <!-- Left Design Panel -->
     <div class="left-panel">
       <div class="text-center">
-        <img src="https://via.placeholder.com/70x70.png?text=Logo" alt="Logo" class="mb-3 logo">
+        <img src="../img/p.png" alt="Logo" class="mb-3 logo">
         <h2>Welcome Back</h2>
         <p>Login to access your account</p>
         <p class="mt-4 small">www.playtech.com</p>
