@@ -13,7 +13,7 @@ COPY ./ /var/www/html/
 RUN a2enmod rewrite headers
 
 # Fix ownership and permissions
-RUN chown -R www-data:www-data /var/www/html /usr/share/phpmyadmin \
- && chmod -R 755 /var/www/html /usr/share/phpmyadmin
+RUN chown -R www-data:www-data /var/www/html \
+ && chmod -R 755 /var/www/html
 
 EXPOSE 80
