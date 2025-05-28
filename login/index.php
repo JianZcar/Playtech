@@ -16,7 +16,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $user = $stmt->fetch();
 
         if ($user && password_verify($password, $user['password'])) {
-
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['email'] = $user['email'];
 
@@ -27,14 +26,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $audit_stmt->bindParam(':activity', $activity);
             $audit_stmt->execute();
 
-
-            header("Location: ../");
-            exit(); 
+            echo json_encode(['status' => 'success', 'redirect' => '../']);
+            exit();
         } else {
-            echo "Invalid email or password.";
+            echo json_encode(['status' => 'error', 'message' => 'Invalid email or password.']);
+            exit();
         }
     } catch (PDOException $e) {
-        echo "Database error: " . $e->getMessage();
+        echo json_encode(['status' => 'error', 'message' => 'Database error: ' . $e->getMessage()]);
+        exit();
     }
 }
 ?>
@@ -127,13 +127,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     height: 70px;
   }
 
+  .is-invalid {
+    border-color: #dc3545 !important;
+  }
+
+  .invalid-feedback {
+    color: #dc3545;
+    font-size: 0.85em;
+    margin-top: 5px;
+  }
+
+  #loadingOverlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    z-index: 9999;
+  }
+
+  .spinner-border {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  #responseModal .modal-content {
+    background-color: #2c2c2c;
+    border: 1px solid #444;
+  }
+
+  #modalMessage {
+    font-size: 1.1rem;
+  }
+
   @media (max-width: 768px) {
     .card-wrapper {
       flex-direction: column;
     }
   }
 </style>
-
 </head>
 <body>
 
@@ -152,21 +186,146 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <!-- Right Form Panel -->
     <div class="right-panel">
       <h4 class="text-center mb-4">Login</h4>
-      <form action="" method="POST">
+      <form id="loginForm" method="POST">
         <div class="form-group">
           <label for="email">Email</label>
           <input type="email" id="email" name="email" class="form-control" placeholder="Enter your email" required>
+          <div class="invalid-feedback"></div>
         </div>
         <div class="form-group">
           <label for="password">Password</label>
           <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required>
+          <div class="invalid-feedback"></div>
         </div>
         <button type="submit" class="btn btn-primary btn-block mt-3">Login</button>
       </form>
-      <p>Don't have an account? <a href="../register">Register here</a></p>
+      <p class="mt-3">Don't have an account? <a href="../register">Register here</a></p>
     </div>
   </div>
 </div>
 
+<!-- Loading Overlay -->
+<div id="loadingOverlay">
+  <div class="d-flex justify-content-center align-items-center h-100">
+    <div class="spinner-border text-primary"></div>
+  </div>
+</div>
+
+<!-- Response Modal -->
+<div class="modal fade" id="responseModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body text-center p-4">
+        <p id="modalMessage" class="mb-0"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Real-time validation
+    $('#email').on('input', function() {
+        const email = $(this).val();
+        const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        setValidationState(this, isValid, 'Invalid email format');
+        
+        // Optionally, check availability (for login, this might not be needed)
+        // if(isValid && email.length > 5) {
+        //     checkEmailAvailability(email);
+        // }
+    });
+
+    $('#password').on('input', function() {
+        const isValid = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).{8,}$/.test($(this).val());
+        setValidationState(this, isValid, 'Requires 8+ chars with uppercase, lowercase, number, and symbol');
+    });
+
+    // Form submission handler
+    $('#loginForm').submit(function(e) {
+        e.preventDefault();
+        if(validateForm()) {
+            submitForm();
+        }
+    });
+});
+
+function setValidationState(field, isValid, message) {
+    const $field = $(field);
+    const $feedback = $field.next('.invalid-feedback');
+    
+    $field.toggleClass('is-invalid', !isValid);
+    
+    if(!isValid && $field.val().length > 0) {
+        $feedback.text(message);
+    } else {
+        $feedback.text('');
+    }
+}
+
+function validateForm() {
+    let isValid = true;
+
+    const email = $('#email').val();
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    setValidationState($('#email')[0], emailValid, 'Invalid email format');
+
+    const passwordValid = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).{8,}$/.test($('#password').val());
+    setValidationState($('#password')[0], passwordValid, 'Requires 8+ chars with uppercase, lowercase, number, and symbol');
+
+    $('.form-control').each(function() {
+        if($(this).hasClass('is-invalid')) {
+            isValid = false;
+        }
+    });
+
+    return isValid;
+}
+
+function submitForm() {
+    showLoading(true);
+    
+    $.ajax({
+        url: '', // Set your login endpoint here
+        type: 'POST',
+        data: $('#loginForm').serialize(),
+        dataType: 'json',
+        success: function(response) {
+            if(response.status === 'success') {
+                showModal('Login successful!', 'green');
+                setTimeout(function() {
+                    window.location.href = response.redirect;
+                }, 1500);
+            } else {
+                showModal(response.message || 'Invalid email or password', 'red');
+            }
+        },
+        error: function(xhr) {
+            showModal('Error: ' + xhr.statusText, 'red');
+        },
+        complete: function() {
+            showLoading(false);
+        }
+    });
+}
+
+function showLoading(show) {
+    $('#loadingOverlay').toggle(show);
+}
+
+function showModal(message, color) {
+    const $modal = $('#responseModal');
+    const $message = $('#modalMessage');
+
+    $message.text(message).css('color', color);
+    $modal.modal('show');
+
+    setTimeout(function() {
+        $modal.modal('hide');
+    }, 3000);
+}
+</script>
 </body>
 </html>
