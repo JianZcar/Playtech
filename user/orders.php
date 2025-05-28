@@ -50,6 +50,7 @@ foreach ($results as $row) {
   <meta charset="UTF-8">
   <title>Your Orders</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="icon" href="../favicon.ico" type="image/x-icon" />
   <style>
     body {
       margin: 0;
@@ -137,7 +138,7 @@ foreach ($results as $row) {
     .order-id {
       color: #0dcaf0;
     }
-    
+
     .order-status {
       pointer-events: none;
       cursor: default;
@@ -147,6 +148,8 @@ foreach ($results as $row) {
 <body>
   <div class="dashboard-wrapper">
     <h2 class="mb-4">Your Orders</h2>
+      <a href="index.php" class="btn btn-outline-info mb-4">&larr; Return to Dashboard</a>
+
 
     <?php if (empty($orders)): ?>
       <div class="alert alert-info">You have not placed any orders yet.</div>

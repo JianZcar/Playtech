@@ -116,12 +116,14 @@
         </div>
       </div>
       <div class="col-md-3">
+        <a href="cart.php" class="text-decoration-none">
         <div class="stat-box">
-          <i class="bi bi-cart4 fs-2 text-info"></i>
-          <h3><?= $cartCount ?></h3>
-          <p>Items in Cart</p>
+            <i class="bi bi-cart4 fs-2 text-info"></i>
+            <h3><?= $cartCount ?></h3>
+            <p>Items in Cart</p>
+          </div>
+          </a>
         </div>
-      </div>
       <div class="col-md-3">
           <a href="orders.php" class="text-decoration-none">
           <div class="stat-box">
