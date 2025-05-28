@@ -1,9 +1,55 @@
 <?php
 // Database connection
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 include "../connection/connect.php";
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
+
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    if ($_POST['action'] === 'add_to_cart') {
+        header('Content-Type: application/json');
+        
+        try {
+            // You'll need to get the user_id from session or authentication
+            $userId = $_SESSION['user_id'];
+            
+            $productId = $_POST['product_id'];
+            $quantity = $_POST['quantity'] ?? 1;
+            
+            // Check if product exists
+            $stmt = $conn->prepare("SELECT id FROM products WHERE id = ?");
+            $stmt->execute([$productId]);
+            if (!$stmt->fetch()) {
+                throw new Exception('Product not found');
+            }
+            
+            // Check if item already in cart
+            $stmt = $conn->prepare("SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ?");
+            $stmt->execute([$userId, $productId]);
+            $existingItem = $stmt->fetch();
+            
+            if ($existingItem) {
+                // Update quantity if already in cart
+                $newQuantity = $existingItem['quantity'] + $quantity;
+                $stmt = $conn->prepare("UPDATE cart SET quantity = ?, date_added = NOW() WHERE id = ?");
+                $stmt->execute([$newQuantity, $existingItem['id']]);
+            } else {
+                // Add new item to cart
+                $stmt = $conn->prepare("INSERT INTO cart (user_id, product_id, quantity, date_added) VALUES (?, ?, ?, NOW())");
+                $stmt->execute([$userId, $productId, $quantity]);
+            }
+            
+            echo json_encode(['status' => 'success', 'message' => 'Product added to cart']);
+        } catch (Exception $e) {
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['fetch']) && $_GET['fetch'] === 'products') {
     header('Content-Type: application/json');
@@ -357,25 +403,6 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
             padding: 20px;
         }
 
-        /* Edit modal specific styles */
-        #currentImageContainer {
-            border: 1px dashed rgba(255,255,255,0.1);
-            padding: 10px;
-            border-radius: 6px;
-            background: rgba(255,255,255,0.03);
-            text-align: center;
-        }
-
-        #currentProductImage {
-            max-width: 100%;
-            margin: 0 auto;
-        }
-
-        .stock-adjustment-info {
-            font-size: 0.8rem;
-            color: var(--muted);
-            margin-top: 5px;
-        }
 
         @media (max-width: 768px) {
             body {
@@ -388,13 +415,44 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 padding: 15px;
             }
             
-            .stat-box {
-                padding: 16px 10px;
-            }
-            
-            .stat-box h4 {
-                font-size: 1.6rem;
-            }
+					/* Add to cart styles */
+					.add-to-cart-btn {
+							padding: 5px 10px;
+							font-size: 0.85rem;
+							transition: all 0.2s ease;
+					}
+
+					.quantity-input {
+							max-width: 40px;
+							text-align: center;
+							background-color: var(--card-bg);
+							color: var(--text);
+							border-color: rgba(255,255,255,0.1);
+					}
+
+					.input-group-sm > .btn {
+							padding: 0.25rem 0.5rem;
+							font-size: 0.75rem;
+					}
+
+					.btn-outline-secondary {
+							border-color: rgba(255,255,255,0.1);
+							color: var(--muted);
+					}
+
+					.btn-outline-secondary:hover {
+							background-color: rgba(255,255,255,0.05);
+							color: var(--text);
+					}
+
+					.btn-success {
+							background-color: var(--secondary);
+							border: none;
+					}
+
+					.btn-success:hover {
+							background-color: #157347;
+					}
         }
     </style>
 </head>
@@ -444,6 +502,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <script>
 $(function(){
+		let addtocart = null;
     $(document).on('click', '.product-card', function() {
         const productId = $(this).data('id');
         currentProductId = productId;
@@ -454,31 +513,42 @@ $(function(){
         // Load product details
         $.get(`<?= $_SERVER['PHP_SELF'] ?>?action=details&product_id=${productId}`, function(data) {
             if (data.status === 'success') {
-                productToDelete = productId;
+                addtocart = productId;
                 const p = data.product;
                 const stats = data.stats;
                 
-                const html = `
-                    <div class="row">
-                        <div class="col-md-4">
-                            <img src="data:image/jpeg;base64,${p.image}" alt="${p.name}" class="img-fluid rounded">
-                        </div>
-                        <div class="col-md-8">
-                            <h3>${p.name}</h3>
-                            <p>${p.category}</p>
-                            <p>${p.description}</p>
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <h5>₱${p.price}</h5>
-                                    <p>Stock: ${p.stock}</p>
-                                </div>
-                                <div>
-                                    <p>Total Sold: ${stats.total_sold}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
+								// In your product details modal content, add:
+								const html = `
+										<div class="row">
+												<div class="col-md-4">
+														<img src="data:image/jpeg;base64,${p.image}" alt="${p.name}" class="img-fluid rounded">
+												</div>
+												<div class="col-md-8">
+														<h3>${p.name}</h3>
+														<p>${p.category}</p>
+														<p>${p.description}</p>
+														<div class="d-flex justify-content-between">
+																<div>
+																    <h5>₱${p.price}</h5>
+																    <p>Stock: ${p.stock}</p>
+																</div>
+																<div>
+																    <p>Total Sold: ${stats.total_sold}</p>
+																</div>
+														</div>
+														
+														<!-- Add to Cart in Details Modal -->
+														<div class="d-flex align-items-center mt-4">
+																<div class="input-group input-group-sm me-2" style="width: 100px;">
+																    <button class="btn btn-outline-secondary minus-btn" type="button">-</button>
+																    <input type="number" class="form-control text-center quantity-input" value="1" min="1" max="100">
+																    <button class="btn btn-outline-secondary plus-btn" type="button">+</button>
+																</div>
+																<button class="btn btn-sm btn-primary add-to-cart-btn" data-product-id="${p.id}">Add to Cart</button>
+														</div>
+												</div>
+										</div>
+								`;
                 $('#productDetailsContent').html(html);
             } else {
                 $('#productDetailsContent').html(`<p class="text-danger">${data.message}</p>`);
@@ -495,7 +565,59 @@ $(function(){
             </div>
         `);
         currentProductId = null;
+        addtocart = null;
     });
+    
+    // Add these event handlers to your $(function(){ ... });
+
+		// Quantity controls
+		$(document).on('click', '.plus-btn', function() {
+				const input = $(this).siblings('.quantity-input');
+				input.val(parseInt(input.val()) + 1);
+		});
+
+		$(document).on('click', '.minus-btn', function() {
+				const input = $(this).siblings('.quantity-input');
+				const value = parseInt(input.val());
+				if (value > 1) {
+				    input.val(value - 1);
+				}
+		});
+
+		// Add to cart button
+		$(document).on('click', '.add-to-cart-btn', function(e) {
+				e.stopPropagation(); // Prevent triggering the product details modal
+				const card = $(this).closest('.product-card');
+				const productId = addtocart;
+				const quantity = card.find('.quantity-input').val();
+				
+				$.post('', {
+				    action: 'add_to_cart',
+				    product_id: productId,
+				    quantity: quantity
+				}, function(response) {
+				    if (response.status === 'success') {
+				        // Show success feedback
+				        const btn = $(e.target);
+				        btn.html('<i class="bi bi-check"></i> Added');
+				        btn.removeClass('btn-primary').addClass('btn-success');
+				        
+				        // Reset after 2 seconds
+				        setTimeout(() => {
+				            btn.html('Add to Cart');
+				            btn.removeClass('btn-success').addClass('btn-primary');
+				        }, 2000);
+				    } else {
+				        alert('Error: ' + response.message);
+				    }
+				}, 'json').fail((jqXHR, textStatus, errorThrown) => {
+				    alert('Request failed:\n' + JSON.stringify({
+				        status: textStatus,
+				        error: errorThrown,
+				        responseText: jqXHR.responseText
+				    }, null, 2));
+				});
+		});
     
 
     const productsContainer = $('#productsContainer');
