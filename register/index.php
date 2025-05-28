@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $audit_stmt->bindParam(':activity', $activity);
             $audit_stmt->execute();
             
-            echo json_encode(['status' => 'success', 'message' => 'Registration successful!', 'redirect' => '/login']);
+            echo json_encode(['status' => 'success', 'message' => 'Registration successful!', 'redirect' => '../login']);
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Database error occurred']);
         }
@@ -236,7 +236,7 @@ function validateInputs($fname, $mname, $lname, $email, $mobile, $password) {
                 </div>
                 <button type="submit" class="btn btn-primary btn-block mt-4">Submit</button>
             </form>
-            <p class="mt-3 text-center">Already have an account? <a href="/login">Login here</a></p>
+            <p class="mt-3 text-center">Already have an account? <a href="../login">Login here</a></p>
         </div>
     </div>
 </div>
