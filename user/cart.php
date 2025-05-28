@@ -116,7 +116,7 @@ require_once 'cart_logic.php';
     }
 
     .return-btn {
-      margin-top: 30px;
+      margin-top: 0;
     }
   </style>
 </head>
@@ -171,7 +171,10 @@ require_once 'cart_logic.php';
         <div><strong>Total:</strong> $<?= number_format($total, 2) ?></div>
       </div>
 
-      <a href="index.php" class="btn btn-outline-info return-btn">← Return to Dashboard</a>
+      <div class="d-flex justify-content-between mt-4">
+        <a href="index.php" class="btn btn-outline-info return-btn">← Return to Dashboard</a>
+        <a href="checkout.php" class="btn btn-outline-info">Proceed to Checkout &#36;</a>
+    </div>
     <?php endif; ?>
   </div>
 
