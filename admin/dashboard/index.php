@@ -95,6 +95,42 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
     .card-header, .card-body {
         background-color: #2c2c2c;
     }
+    .card:hover > .product-img {
+      transform: scale(1.05);  /* Slight zoom on hover */
+      box-shadow: 0 4px 10px rgba(13, 202, 240, 0.6); /* subtle blue glow */
+    }
+    .card-body {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between; /* Spread content vertically */
+      height: 160px;                   /* Fix the height to use space */
+    }
+
+    .card-body h6 {
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: #0dcaf0;
+    }
+
+    .card-body small {
+      color: #8ab8c9;
+    }
+
+    .card-body span {
+      font-weight: bold;
+      font-size: 1.1rem;
+      color: #3cd070;
+    }
+
+    .card-body p {
+      flex-grow: 1;       /* Make description take remaining space */
+      font-size: 0.85rem;
+      color: #b0b0b0;
+      margin-top: 10px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     .form-control, .btn {
         border-radius: 30px;
     }
@@ -126,9 +162,13 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
         color: #ccc;
     }
     .product-img {
-        height: 100px;
-        object-fit: cover;
+      height: 180px;            /* Bigger height for emphasis */
+      object-fit: cover;
+      border-radius: 10px;
+   
+      transition: transform 0.3s ease;
     }
+
     /* Modal styles override for dark theme */
     .modal-content {
       background-color: #2c2c2c;
@@ -158,7 +198,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <!-- Products Table -->
     <div class="card mb-4">
         <div class="card-header"><h5 class="mb-0">Products</h5></div>
-        <div class="card-body">
+        <div>
             <div class="row">
                 <?php foreach ($products as $product): ?>
                     <div class="col-md-3 mb-4">
@@ -166,9 +206,9 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <img src="data:image/jpeg;base64,<?= base64_encode($product['image']) ?>" class="card-img-top product-img" alt="Product Image"/>
                             <div class="card-body">
                                 <h6><?= htmlspecialchars($product['name']) ?></h6>
-                                <small class="text-muted"><?= htmlspecialchars($product['category']) ?></small><br/>
+                                <small><?= htmlspecialchars($product['category']) ?></small><br/>
                                 <span>₱<?= number_format($product['price'], 2) ?></span>
-                                <p class="text-muted small mt-2"><?= htmlspecialchars($product['description']) ?></p>
+                                <p><?= htmlspecialchars($product['description']) ?></p>
                             </div>
                         </div>
                     </div>
