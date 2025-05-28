@@ -1,278 +1,257 @@
+<?php
+// Database connection
+include "../../connection/connect.php";
+
+// Handle AJAX POSTs
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+
+    if (isset($_POST['action'])) {
+        if ($_POST['action'] === 'add_category') {
+            $stmt = $conn->prepare("INSERT INTO categories (name, description, date_created) VALUES (?, ?, CURDATE())");
+            $stmt->execute([$_POST['name'], $_POST['description']]);
+            echo json_encode(['status' => 'success', 'message' => 'Category added']);
+            exit;
+        }
+
+        if ($_POST['action'] === 'add_product') {
+            if (!isset($_POST['image_base64'], $_POST['image_type'])) {
+                echo json_encode(['status' => 'error', 'message' => 'Missing image data']);
+                exit;
+            }
+
+            $imageData = base64_decode($_POST['image_base64']);
+
+            if ($imageData === false) {
+                echo json_encode(['status' => 'error', 'message' => 'Invalid base64 image']);
+                exit;
+            }
+
+            $stmt = $conn->prepare("INSERT INTO products (name, description, price, category_id, stock, image, date_added) VALUES (?, ?, ?, ?, ?, ?, CURDATE())");
+            $stmt->execute([
+                $_POST['name'],
+                $_POST['description'],
+                $_POST['price'],
+                $_POST['category_id'],
+                $_POST['stock'],
+                $imageData
+            ]);
+
+            echo json_encode(['status' => 'success', 'message' => 'Product added (base64)']);
+            exit;
+        }
+    }
+
+    echo json_encode(['status' => 'error', 'message' => 'Invalid action']);
+    exit;
+}
+
+// Fetch stats
+$stats = [];
+foreach (['users', 'products', 'orders', 'categories'] as $table) {
+    $stmt = $conn->query("SELECT COUNT(*) AS count FROM $table");
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    $stats[$table] = $row['count'];
+}
+
+// Fetch products
+$stmt = $conn->query("SELECT p.*, c.name AS category FROM products p LEFT JOIN categories c ON p.category_id = c.id");
+$products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch categories
+$stmt = $conn->query("SELECT * FROM categories");
+$categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
-    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(to right, #121212, #3a3a3a);
-            color: #f0f0f0;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            width: 250px;
-            height: 100vh;
-            background: #1e1e1e;
-            position: fixed;
-            padding: 20px;
-        }
-
-        .main-content {
-            margin-left: 250px;
-            padding: 30px;
-        }
-
-        .stats-card {
-            background: #2c2c2c;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 10px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.3);
-        }
-
-        .product-card {
-            background: #2c2c2c;
-            border-radius: 10px;
-            margin: 15px 0;
-            padding: 15px;
-            transition: transform 0.3s;
-        }
-
-        .product-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .loading {
-            display: none;
-            position: absolute;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard</title>
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet"/>
+  <style>
+    body {
+        background: linear-gradient(to right, #121212, #3a3a3a);
+        color: #f0f0f0;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 40px;
+    }
+    .card {
+        background-color: #1e1e1e;
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    }
+    .card-header, .card-body {
+        background-color: #2c2c2c;
+    }
+    .form-control, .btn {
+        border-radius: 30px;
+    }
+    .btn-primary {
+        background: linear-gradient(to right, #0dcaf0, #198754);
+        border: none;
+    }
+    .btn-primary:hover {
+        background: linear-gradient(to right, #198754, #0dcaf0);
+    }
+    .form-control {
+        background-color: #3a3a3a;
+        border: 1px solid #555;
+        color: #f0f0f0;
+    }
+    .form-control::placeholder {
+        color: #aaa;
+    }
+    .stat-box {
+        text-align: center;
+        padding: 20px;
+    }
+    .stat-box h4 {
+        font-size: 2rem;
+        color: #0dcaf0;
+    }
+    .stat-box p {
+        font-size: 1rem;
+        color: #ccc;
+    }
+    .product-img {
+        height: 100px;
+        object-fit: cover;
+    }
+  </style>
 </head>
 <body>
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <h3 class="text-primary mb-4">Admin Panel</h3>
-        <ul class="nav flex-column">
-            <li class="nav-item"><a href="#dashboard" class="nav-link text-light">Dashboard</a></li>
-            <li class="nav-item"><a href="#products" class="nav-link text-light">Products</a></li>
-            <li class="nav-item"><a href="#orders" class="nav-link text-light">Orders</a></li>
-        </ul>
+<div class="container-fluid">
+    <div class="row text-center mb-4">
+        <div class="col-md-3 stat-box"><h4><?= $stats['users'] ?></h4><p>Users</p></div>
+        <div class="col-md-3 stat-box"><h4><?= $stats['products'] ?></h4><p>Products</p></div>
+        <div class="col-md-3 stat-box"><h4><?= $stats['orders'] ?></h4><p>Orders</p></div>
+        <div class="col-md-3 stat-box"><h4><?= $stats['categories'] ?></h4><p>Categories</p></div>
     </div>
 
-    <!-- Main Content -->
-    <div class="main-content">
-        <!-- Order Stats -->
-        <div class="row" id="orderStats">
-            <div class="col-md-3">
-                <div class="stats-card">
-                    <h5>Total Orders</h5>
-                    <h2 id="totalOrders">0</h2>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stats-card">
-                    <h5>Pending</h5>
-                    <h2 id="pendingOrders">0</h2>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stats-card">
-                    <h5>Delivering</h5>
-                    <h2 id="deliveringOrders">0</h2>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stats-card">
-                    <h5>Delivered</h5>
-                    <h2 id="deliveredOrders">0</h2>
-                </div>
-            </div>
-        </div>
-
-        <!-- Products Section -->
-        <div class="mt-5">
-            <div class="d-flex justify-content-between mb-4">
-                <h3>Products</h3>
-                <div>
-                    <select id="categoryFilter" class="form-control bg-dark text-light" style="display: inline-block; width: auto;">
-                        <option value="">All Categories</option>
-                    </select>
-                    <button class="btn btn-primary ml-2" onclick="showAddProductModal()">Add Product</button>
-                </div>
-            </div>
-            
-            <div id="productsGrid" class="row">
-                <!-- Products will be loaded here -->
-                <div class="loading">Loading products...</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add Product Modal -->
-    <div class="modal fade" id="productModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content bg-dark">
-                <div class="modal-header">
-                    <h5 class="modal-title">Add New Product</h5>
-                    <button type="button" class="close text-light" data-dismiss="modal">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <form id="productForm" enctype="multipart/form-data">
-                        <div class="form-group">
-                            <label>Product Name</label>
-                            <input type="text" class="form-control bg-darker" name="name" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Description</label>
-                            <textarea class="form-control bg-darker" name="description" rows="3"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Price</label>
-                            <input type="number" step="0.01" class="form-control bg-darker" name="price" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Category</label>
-                            <select class="form-control bg-darker" name="category_id" id="modalCategory" required></select>
-                        </div>
-                        <div class="form-group">
-                            <label>Stock</label>
-                            <input type="number" class="form-control bg-darker" name="stock" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Image</label>
-                            <input type="file" class="form-control-file" name="image" accept="image/*">
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-block">Save Product</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script>
-        // Initial load
-        $(document).ready(function() {
-            loadOrderStats();
-            loadCategories();
-            loadProducts();
-        });
-
-        async function loadOrderStats() {
-            showLoading('#orderStats');
-            try {
-                const response = await fetch('/api/admin/orders/stats');
-                const data = await response.json();
-                
-                document.getElementById('totalOrders').textContent = data.total;
-                document.getElementById('pendingOrders').textContent = data.pending;
-                document.getElementById('deliveringOrders').textContent = data.delivering;
-                document.getElementById('deliveredOrders').textContent = data.delivered;
-            } catch (error) {
-                showModalMessage('Error loading stats', 'red');
-            }
-            hideLoading('#orderStats');
-        }
-
-        async function loadCategories() {
-            try {
-                const response = await fetch('/api/categories');
-                const categories = await response.json();
-                
-                const filter = document.getElementById('categoryFilter');
-                const modalSelect = document.getElementById('modalCategory');
-                
-                categories.forEach(cat => {
-                    const option = `<option value="${cat.id}">${cat.name}</option>`;
-                    filter.innerHTML += option;
-                    modalSelect.innerHTML += option;
-                });
-            } catch (error) {
-                showModalMessage('Error loading categories', 'red');
-            }
-        }
-
-        async function loadProducts(categoryId = '') {
-            showLoading('#productsGrid');
-            try {
-                const url = `/api/admin/products${categoryId ? `?category_id=${categoryId}` : ''}`;
-                const response = await fetch(url);
-                const products = await response.json();
-                
-                const grid = document.getElementById('productsGrid');
-                grid.innerHTML = products.map(product => `
-                    <div class="col-md-4">
-                        <div class="product-card">
-                            <img src="${product.image_url}" class="img-fluid mb-2" alt="${product.name}">
-                            <h5>${product.name}</h5>
-                            <p>$${product.price} | Stock: ${product.stock}</p>
-                            <div class="d-flex justify-content-between">
-                                <button class="btn btn-sm btn-info" onclick="editProduct(${product.id})">Edit</button>
-                                <button class="btn btn-sm btn-danger" onclick="deleteProduct(${product.id})">Delete</button>
+    <!-- Products Table -->
+    <div class="card mb-4">
+        <div class="card-header"><h5 class="mb-0">Products</h5></div>
+        <div class="card-body">
+            <div class="row">
+                <?php foreach ($products as $product): ?>
+                    <div class="col-md-3 mb-4">
+                        <div class="card text-center">
+                            <img src="data:image/jpeg;base64,<?= base64_encode($product['image']) ?>" class="card-img-top product-img" alt="Product Image"/>
+                            <div class="card-body">
+                                <h6><?= htmlspecialchars($product['name']) ?></h6>
+                                <small class="text-muted"><?= htmlspecialchars($product['category']) ?></small><br/>
+                                <span>₱<?= number_format($product['price'], 2) ?></span>
+                                <p class="text-muted small mt-2"><?= htmlspecialchars($product['description']) ?></p>
                             </div>
                         </div>
                     </div>
-                `).join('');
-            } catch (error) {
-                showModalMessage('Error loading products', 'red');
-            }
-            hideLoading('#productsGrid');
-        }
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
 
-        async function submitProductForm(e) {
-            e.preventDefault();
-            const formData = new FormData(document.getElementById('productForm'));
-            
-            try {
-                const response = await fetch('/api/admin/products', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                if (response.ok) {
-                    $('#productModal').modal('hide');
-                    loadProducts();
-                    showModalMessage('Product added successfully', 'green');
-                } else {
-                    showModalMessage('Error adding product', 'red');
-                }
-            } catch (error) {
-                showModalMessage('Network error', 'red');
-            }
-        }
+    <!-- Add Category -->
+    <div class="card mb-4">
+        <div class="card-header"><h5 class="mb-0">Add Category</h5></div>
+        <div class="card-body">
+            <form id="categoryForm">
+                <input type="hidden" name="action" value="add_category">
+                <div class="form-row">
+                    <div class="col">
+                        <input type="text" name="name" class="form-control" placeholder="Category Name" required>
+                    </div>
+                    <div class="col">
+                        <input type="text" name="description" class="form-control" placeholder="Description">
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-primary" type="submit">Add</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 
-        function showAddProductModal() {
-            document.getElementById('productForm').reset();
-            $('#productModal').modal('show');
-        }
+    <!-- Add Product -->
+    <div class="card mb-4">
+        <div class="card-header"><h5 class="mb-0">Add Product</h5></div>
+        <div class="card-body">
+            <form id="productForm" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="add_product">
+                <div class="form-row mb-2">
+                    <div class="col"><input type="text" name="name" class="form-control" placeholder="Product Name" required></div>
+                    <div class="col"><input type="text" name="description" class="form-control" placeholder="Description"></div>
+                </div>
+                <div class="form-row mb-2">
+                    <div class="col"><input type="number" step="0.01" name="price" class="form-control" placeholder="Price" required></div>
+                    <div class="col"><input type="number" name="stock" class="form-control" placeholder="Stock" required></div>
+                    <div class="col">
+                        <select name="category_id" class="form-control" required>
+                            <option value="">Select Category</option>
+                            <?php foreach ($categories as $cat): ?>
+                                <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col"><input type="file" name="image" class="form-control-file" required></div>
+                    <div class="col-auto">
+                        <button class="btn btn-primary" type="submit">Add</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
-        function showLoading(selector) {
-            const container = document.querySelector(selector);
-            container.querySelector('.loading').style.display = 'block';
-        }
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script>
+$('#categoryForm').submit(function(e) {
+    e.preventDefault();
+    $.post('', $(this).serialize(), function(res) {
+        alert(res.message);
+        if(res.status === 'success') location.reload();
+    }, 'json');
+});
 
-        function hideLoading(selector) {
-            const container = document.querySelector(selector);
-            container.querySelector('.loading').style.display = 'none';
-        }
+$("#productForm").on("submit", function(e) {
+  e.preventDefault();
 
-        // Event listeners
-        document.getElementById('categoryFilter').addEventListener('change', (e) => {
-            loadProducts(e.target.value);
-        });
+  const formData = new FormData(this);
+  const file = $("input[name='image']")[0].files[0];
 
-        document.getElementById('productForm').addEventListener('submit', submitProductForm);
-    </script>
+  if (!file) return alert("Select an image!");
+
+  const reader = new FileReader();
+  reader.onload = function() {
+    const base64 = reader.result.split(',')[1];
+    const imageType = file.type;
+
+    formData.append("action", "add_product");
+    formData.append("image_base64", base64);
+    formData.append("image_type", imageType);
+
+    // Remove original file input so it won't conflict
+    formData.delete("image");
+
+    $.ajax({
+      type: "POST",
+      url: "./",
+      data: formData,
+      processData: false,
+      contentType: false,
+      success: function(response) {
+        alert(response.message);
+      },
+      error: function() {
+        alert("Upload failed.");
+      }
+    });
+  };
+
+  reader.readAsDataURL(file);
+});
+</script>
 </body>
 </html>
