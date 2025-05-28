@@ -159,6 +159,11 @@ function validateInputs($fname, $mname, $lname, $email, $mobile, $password) {
         background: linear-gradient(to right, #198754, #0dcaf0);
     }
 
+    .logo {
+      width: 70px;
+      height: 70px;
+    }
+
     .is-invalid {
         border-color: #dc3545 !important;
     }
