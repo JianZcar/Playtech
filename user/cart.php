@@ -1,45 +1,5 @@
 <?php
-require_once 'logic.php';
-
-if (!isset($_SESSION['email'])) {
-    die('User not logged in.');
-}
-
-$email = $_SESSION['email'];
-
-// Fetch user ID
-$user_stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
-$user_stmt->execute([$email]);
-$user = $user_stmt->fetch(PDO::FETCH_ASSOC);
-$user_id = $user['id'] ?? null;
-
-if (!$user_id) {
-    die('User not found.');
-}
-
-// Fetch cart items with category name
-$cart_stmt = $conn->prepare("
-    SELECT 
-        c.id AS cart_id, 
-        c.quantity, 
-        p.name, 
-        p.price, 
-        p.image,
-        cat.name AS category_name
-    FROM cart c
-    JOIN products p ON c.product_id = p.id
-    LEFT JOIN categories cat ON p.category_id = cat.id
-    WHERE c.user_id = ?
-");
-$cart_stmt->execute([$user_id]);
-$cart_items = $cart_stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Totals
-$subtotal = 0;
-foreach ($cart_items as $item) {
-    $subtotal += $item['price'] * $item['quantity'];
-}
-$total = $subtotal;
+require_once 'cart_logic.php';
 ?>
 
 <!DOCTYPE html>
@@ -47,6 +7,7 @@ $total = $subtotal;
 <head>
   <meta charset="UTF-8">
   <title>Shopping Cart</title>
+  <link rel="icon" href="../favicon.ico" type="image/x-icon" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body {
@@ -68,7 +29,10 @@ $total = $subtotal;
 
     .cart-table {
       width: 100%;
-      border-collapse: collapse;
+      border-collapse: separate;
+      border-spacing: 0;
+      border-radius: 12px;
+      overflow: hidden;
     }
 
     .cart-table thead {
@@ -80,6 +44,22 @@ $total = $subtotal;
       padding: 16px;
       vertical-align: middle;
       border-bottom: 1px solid #444;
+    }
+
+    .cart-table thead th:first-child {
+      border-top-left-radius: 12px;
+    }
+
+    .cart-table thead th:last-child {
+      border-top-right-radius: 12px;
+    }
+
+    .cart-table tbody tr:last-child td:first-child {
+      border-bottom-left-radius: 12px;
+    }
+
+    .cart-table tbody tr:last-child td:last-child {
+      border-bottom-right-radius: 12px;
     }
 
     .product-info {
@@ -137,13 +117,13 @@ $total = $subtotal;
     }
 
     .return-btn {
-      margin-top: 30px;
+      margin-top: 0;
     }
   </style>
 </head>
 <body>
   <div class="dashboard-wrapper">
-    <h2>Your Shopping Cart</h2>
+    <h2 class="mb-4">Your Shopping Cart</h2>
     
     <?php if (empty($cart_items)): ?>
       <div class="empty-cart">Your cart is empty.</div>
@@ -174,7 +154,10 @@ $total = $subtotal;
                 </div>
               </td>
               <td style="text-align: center;">
-                <input type="number" value="<?= $item['quantity'] ?>" readonly class="quantity-input">
+              <input type="number" min="1" value="<?= $item['quantity'] ?>" 
+                class="quantity-input" 
+                data-cart-id="<?= $item['cart_id'] ?>" 
+                data-price="<?= $item['price'] ?>">
               </td>
               <td style="text-align: right;">
                 $<?= number_format($item['price'] * $item['quantity'], 2) ?>
@@ -189,8 +172,52 @@ $total = $subtotal;
         <div><strong>Total:</strong> $<?= number_format($total, 2) ?></div>
       </div>
 
-      <a href="index.php" class="btn btn-outline-info return-btn">← Return to Dashboard</a>
+      <div class="d-flex justify-content-between mt-4">
+        <a href="index.php" class="btn btn-outline-info return-btn">← Return to Dashboard</a>
+        <a href="checkout.php" class="btn btn-outline-info">Proceed to Checkout &#36;</a>
+    </div>
     <?php endif; ?>
   </div>
+
+  <script>
+document.querySelectorAll('.quantity-input').forEach(input => {
+  input.addEventListener('change', function () {
+    const cartId = this.dataset.cartId;
+    const price = parseFloat(this.dataset.price);
+    const quantity = parseInt(this.value);
+    const row = this.closest('tr');
+
+    if (quantity < 1) {
+      this.value = 1;
+      return;
+    }
+
+    // Update subtotal for this row
+    const subtotalCell = row.querySelector('td:last-child');
+    const newSubtotal = (price * quantity).toFixed(2);
+    subtotalCell.textContent = `$${newSubtotal}`;
+
+    // Update cart in backend
+    fetch('update_cart_quantity.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: `cart_id=${cartId}&quantity=${quantity}`
+    }).then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          document.querySelector('.cart-summary div:first-child').innerHTML =
+            `<strong>Subtotal:</strong> $${data.subtotal.toFixed(2)}`;
+          document.querySelector('.cart-summary div:last-child').innerHTML =
+            `<strong>Total:</strong> $${data.total.toFixed(2)}`;
+        } else {
+          alert('Failed to update quantity.');
+        }
+      });
+  });
+});
+</script>
+
 </body>
 </html>
