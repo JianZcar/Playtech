@@ -43,6 +43,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 echo json_encode(['status' => 'success', 'message' => 'Product added']);
                 exit;
             }
+            if ($_POST['action'] === 'delete_product') {
+                try {
+                    $productId = $_POST['product_id'];
+                    
+                    // First check if the product exists
+                    $stmt = $conn->prepare("SELECT id FROM products WHERE id = ?");
+                    $stmt->execute([$productId]);
+                    if (!$stmt->fetch()) {
+                        throw new Exception('Product not found');
+                    }
+                    
+                    // Begin transaction for multiple operations
+                    $conn->beginTransaction();
+                    
+                    try {
+                        // Delete from cart first (due to foreign key constraint)
+                        $stmt = $conn->prepare("DELETE FROM cart WHERE product_id = ?");
+                        $stmt->execute([$productId]);
+                        
+                        // Delete from order_items
+                        $stmt = $conn->prepare("DELETE FROM order_items WHERE product_id = ?");
+                        $stmt->execute([$productId]);
+                        
+                        // Delete inventory logs
+                        $stmt = $conn->prepare("DELETE FROM inventory_logs WHERE product_id = ?");
+                        $stmt->execute([$productId]);
+                        
+                        // Finally delete the product
+                        $stmt = $conn->prepare("DELETE FROM products WHERE id = ?");
+                        $stmt->execute([$productId]);
+                        
+                        $conn->commit();
+                        
+                        echo json_encode(['status' => 'success', 'message' => 'Product deleted successfully']);
+                        exit;
+                    } catch (Exception $e) {
+                        $conn->rollBack();
+                        throw $e;
+                    }
+                } catch (Exception $e) {
+                    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+                    exit;
+                }
+            }
+
             if ($_POST['action'] === 'edit_product') {
         try {
             $productId = $_POST['product_id'];
@@ -668,10 +713,29 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </div>
                     </div>
                     <div class="modal-footer">
+                        <button type="button" class="btn btn-danger me-auto" id="deleteProductBtn"><i class="bi bi-trash"></i>Delete</button>
                         <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-primary">Save Changes</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this product? This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Yes, Delete</button>
+                </div>
             </div>
         </div>
     </div>
@@ -743,7 +807,37 @@ $(function(){
     $('#openAddCategory').on('click', function () {  
         $('#addCategoryModal').modal('show');
     });
+    // Add these variables at the top of your script
+    let productToDelete = null;
 
+    // Add this to your existing JavaScript (after the edit functionality)
+    function setupDeleteButton() {
+        // Handle delete button click
+        $(document).on('click', '#deleteProductBtn', function() {
+            $('#productDetailsModal').modal('hide');
+            $('#deleteConfirmModal').modal('show');
+        });
+        
+        // Handle confirm delete button
+        $('#confirmDeleteBtn').click(function() {
+            if (productToDelete) {
+                $.post('', {
+                    action: 'delete_product',
+                    product_id: productToDelete
+                }, function(response) {
+                    if (response.status === 'success') {
+                        alert(response.message);
+                        fetchProducts(); // Refresh the product list
+                    } else {
+                        alert('Error: ' + response.message);
+                    }
+                    $('#deleteConfirmModal').modal('hide');
+                    productToDelete = null;
+                }, 'json');
+            }
+        });
+    }
+    setupDeleteButton();
     $(document).on('click', '.product-card', function() {
         const productId = $(this).data('id');
         currentProductId = productId;
@@ -754,6 +848,7 @@ $(function(){
         // Load product details
         $.get(`<?= $_SERVER['PHP_SELF'] ?>?action=details&product_id=${productId}`, function(data) {
             if (data.status === 'success') {
+                productToDelete = productId;
                 const p = data.product;
                 const stats = data.stats;
                 
