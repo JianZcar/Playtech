@@ -166,8 +166,12 @@
             <h5 class="section-title"><i class="bi bi-gear"></i> Account Settings</h5>
             <p class="text-white mb-1">Email: <?= htmlspecialchars($userProfile['email']) ?></p>
             <p class="text-white mb-3">Mobile: <?= htmlspecialchars($userProfile['mobile']) ?></p>
-            <button class="btn btn-outline-info btn-sm"><i class="bi bi-pencil"></i> Edit Profile</button>
-            <button class="btn btn-outline-danger btn-sm"><i class="bi bi-box-arrow-right"></i> Logout</button>
+            <button class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+              <i class="bi bi-pencil"></i> Edit Profile
+            </button>
+            <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#logoutModal">
+              <i class="bi bi-box-arrow-right"></i> Logout
+            </button>
           </div>
         </div>
       </div>
@@ -193,6 +197,63 @@
     </div>
 
   </div>
+
+  <!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content bg-dark text-white" method="post" action="">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editProfileLabel">Edit Profile</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label>First Name</label>
+          <input type="text" name="edit_fname" class="form-control" value="<?= htmlspecialchars($userProfile['fname']) ?>" required>
+        </div>
+        <div class="mb-3">
+          <label>Middle Name</label>
+          <input type="text" name="edit_mname" class="form-control" placeholder="(Optional)">
+        </div>
+        <div class="mb-3">
+          <label>Last Name</label>
+          <input type="text" name="edit_lname" class="form-control" value="<?= htmlspecialchars($userProfile['lname']) ?>" required>
+        </div>
+        <div class="mb-3">
+          <label>Mobile</label>
+          <input type="text" name="edit_mobile" class="form-control" value="<?= htmlspecialchars($userProfile['mobile']) ?>" required>
+        </div>
+        <div class="mb-3">
+          <label>New Password</label>
+          <input type="password" name="edit_password" class="form-control" placeholder="Leave blank to keep current password">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" name="update_profile" class="btn btn-info">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Logout Modal -->
+<div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark text-white">
+      <div class="modal-header">
+        <h5 class="modal-title" id="logoutLabel">Confirm Logout</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to log out?
+      </div>
+      <div class="modal-footer">
+        <a href="logout.php" class="btn btn-danger">Yes, Logout</a>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>

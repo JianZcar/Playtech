@@ -5,6 +5,7 @@ $servername = getenv('DB_HOST');
 $username = getenv('DB_USER');
 $password = getenv('DB_PASS');
 
+
 try {
   $conn = new PDO("mysql:host=$servername; dbname=playtech", $username, $password);
   // set the PDO error mode to exception
