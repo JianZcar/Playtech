@@ -1,48 +1,57 @@
 <?php
 // Database connection
 include "../../connection/connect.php";
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 
 // Handle AJAX POSTs
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
 
     if (isset($_POST['action'])) {
-        if ($_POST['action'] === 'add_category') {
-            $stmt = $conn->prepare("INSERT INTO categories (name, description, date_created) VALUES (?, ?, CURDATE())");
-            $stmt->execute([$_POST['name'], $_POST['description']]);
-            echo json_encode(['status' => 'success', 'message' => 'Category added']);
-            exit;
-        }
-
-        if ($_POST['action'] === 'add_product') {
-            if (!isset($_POST['image_base64'], $_POST['image_type'])) {
-                echo json_encode(['status' => 'error', 'message' => 'Missing image data']);
+        try {
+            if ($_POST['action'] === 'add_category') {
+                $stmt = $conn->prepare("INSERT INTO categories (name, description, date_created) VALUES (?, ?, CURDATE())");
+                $stmt->execute([$_POST['name'], $_POST['description']]);
+                echo json_encode(['status' => 'success', 'message' => 'Category added']);
                 exit;
             }
 
-            $imageData = base64_decode($_POST['image_base64']);
+            if ($_POST['action'] === 'add_product') {
+                if (!isset($_POST['image_base64'], $_POST['image_type'])) {
+                    throw new Exception('Missing image data');
+                }
 
-            if ($imageData === false) {
-                echo json_encode(['status' => 'error', 'message' => 'Invalid base64 image']);
+                $imageData = base64_decode($_POST['image_base64']);
+
+                if ($imageData === false) {
+                    throw new Exception('Invalid base64 image');
+                }
+
+                $stmt = $conn->prepare("INSERT INTO products (name, description, price, category_id, stock, image, date_added) VALUES (?, ?, ?, ?, ?, ?, CURDATE())");
+                $stmt->execute([
+                    $_POST['name'],
+                    $_POST['description'],
+                    $_POST['price'],
+                    $_POST['category_id'],
+                    $_POST['stock'],
+                    $imageData
+                ]);
+
+                echo json_encode(['status' => 'success', 'message' => 'Product added']);
                 exit;
             }
 
-            $stmt = $conn->prepare("INSERT INTO products (name, description, price, category_id, stock, image, date_added) VALUES (?, ?, ?, ?, ?, ?, CURDATE())");
-            $stmt->execute([
-                $_POST['name'],
-                $_POST['description'],
-                $_POST['price'],
-                $_POST['category_id'],
-                $_POST['stock'],
-                $imageData
-            ]);
-
-            echo json_encode(['status' => 'success', 'message' => 'Product added (base64)']);
+            throw new Exception('Invalid action');
+        } catch (Exception $e) {
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
             exit;
         }
     }
 
-    echo json_encode(['status' => 'error', 'message' => 'Invalid action']);
+    echo json_encode(['status' => 'error', 'message' => 'No action specified']);
     exit;
 }
 
