@@ -134,6 +134,10 @@ foreach ($results as $row) {
       box-shadow: 0 0 8px #28a74580;
     }
 
+    .order-id {
+      color: #0dcaf0;
+    }
+    
     .order-status {
       pointer-events: none;
       cursor: default;
@@ -151,7 +155,7 @@ foreach ($results as $row) {
         <div class="card card-custom">
           <div class="card-header d-flex justify-content-between align-items-center">
             <div>
-              <strong>Order #<?= $order_id ?></strong>
+              <strong class="order-id">Order #<?= $order_id ?></strong>
               <div class="text-light small">Date: <?= date("F j, Y, g:i a", strtotime($order['info']['order_date'])) ?></div>
             </div>
             <div>
