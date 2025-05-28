@@ -1,15 +1,10 @@
 <?php
-include "../connection/connect.php";
-
-if (!isset($_SESSION['user_id'])) {
-    header("Location: ../login");
-    exit;
-}
+include "../../connection/connect.php";
 
 $userId = $_SESSION['user_id'];
 
 // Fetch first name
-$stmt = $conn->prepare("SELECT fname FROM users WHERE id = ?");
+$stmt = $conn->prepare("SELECT name FROM admins WHERE id = ?");
 $stmt->execute([$userId]);
 $fname = $stmt->fetchColumn();
 ?>
@@ -24,20 +19,18 @@ $fname = $stmt->fetchColumn();
         </button>
 
         <div class="collapse navbar-collapse" id="navbarNavDropdown">
-						 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-								<li class="nav-item">
-										<a class="nav-link" href="/../dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
-								</li>
-								<li class="nav-item">
-											<a class="nav-link" href="/../products"><i class="bi bi-shop"></i> Store </a>
-								</li>
-								<li class="nav-item">
-										<a class="nav-link" href="/../cart"><i class="bi bi-cart3"></i> Cart</a>
-								</li>
-								<li class="nav-item">
-										<a class="nav-link" href="/../orders"><i class="bi bi-receipt-cutoff"></i> Orders</a>
-								</li>
-						</ul>
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link" href="../dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="../users"><i class="bi bi-people"></i> User Management</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="../categories"><i class="bi bi-tags"></i> Category Management</a>
+                </li>
+            </ul>
+
             <ul class="navbar-nav">
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown">
@@ -45,12 +38,11 @@ $fname = $stmt->fetchColumn();
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark" aria-labelledby="profileDropdown">
                         <li><a class="dropdown-item" href="settings.php"><i class="bi bi-gear"></i> Settings</a></li>
-                        <li><a class="dropdown-item" href="../user/logout.php"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                        <li><a class="dropdown-item" href="../../user/logout.php"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
                     </ul>
                 </li>
             </ul>
         </div>
     </div>
 </nav>
-
 

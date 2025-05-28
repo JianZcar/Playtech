@@ -9,17 +9,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'];
 
     try {
-        $sql = "SELECT * FROM users WHERE email = :email";
-        $stmt = $conn->prepare($sql);
-        $stmt->bindParam(':email', $email);
-        $stmt->execute();
-        $user = $stmt->fetch();
+        // Check in admins table first
+        $admin_sql = "SELECT * FROM admins WHERE email = :email";
+        $admin_stmt = $conn->prepare($admin_sql);
+        $admin_stmt->bindParam(':email', $email);
+        $admin_stmt->execute();
+        $admin = $admin_stmt->fetch();
+
+        if ($admin && password_verify($password, $admin['password'])) {
+            $_SESSION['user_id'] = $admin['id'];
+            $_SESSION['email'] = $admin['email'];
+            $_SESSION['is_super'] = $admin['is_super']; // boolean: 1 or 0
+            $_SESSION['is_admin'] = 1;
+
+            $activity = "Admin Login";
+            $audit_sql = "INSERT INTO audit_trail (email, activity, login) VALUES (:email, :activity, 1)";
+            $audit_stmt = $conn->prepare($audit_sql);
+            $audit_stmt->bindParam(':email', $email);
+            $audit_stmt->bindParam(':activity', $activity);
+            $audit_stmt->execute();
+
+            echo json_encode(['status' => 'success', 'redirect' => '../admin']);
+            exit();
+        }
+
+        // If not admin, check in users table
+        $user_sql = "SELECT * FROM users WHERE email = :email";
+        $user_stmt = $conn->prepare($user_sql);
+        $user_stmt->bindParam(':email', $email);
+        $user_stmt->execute();
+        $user = $user_stmt->fetch();
 
         if ($user && password_verify($password, $user['password'])) {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['email'] = $user['email'];
+            $_SESSION['is_admin'] = 0;
+            unset($_SESSION['is_super']); // not an admin
 
-            $activity = "Login";
+            $activity = "User Login";
             $audit_sql = "INSERT INTO audit_trail (email, activity, login) VALUES (:email, :activity, 1)";
             $audit_stmt = $conn->prepare($audit_sql);
             $audit_stmt->bindParam(':email', $email);
@@ -28,15 +55,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             echo json_encode(['status' => 'success', 'redirect' => '../']);
             exit();
-        } else {
-            echo json_encode(['status' => 'error', 'message' => 'Invalid email or password.']);
-            exit();
         }
+
+        // Invalid login
+        echo json_encode(['status' => 'error', 'message' => 'Invalid email or password.']);
+        exit();
+
     } catch (PDOException $e) {
         echo json_encode(['status' => 'error', 'message' => 'Database error: ' . $e->getMessage()]);
         exit();
     }
 }
+
 ?>
 
 <!DOCTYPE html>

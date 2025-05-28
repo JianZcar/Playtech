@@ -1,5 +1,10 @@
 <?php
 // Database connection
+session_start();
+if (!isset($_SESSION['is_admin'])) {
+    header("Location: ../../dashboard");
+    exit;
+}
 include "../../connection/connect.php";
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -312,7 +317,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
         
         body {
-            background: var(--dark-bg);
+            background: linear-gradient(to right, #121212, #3a3a3a);
             color: var(--text);
             font-family: 'Segoe UI', system-ui, sans-serif;
             padding: 30px;
@@ -325,6 +330,14 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         /* Minimalist cards */
         .card {
+            background-color: var(--card-bg);
+            border: none;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.2s ease;
+        }
+        
+        .card-container {
             background-color: var(--card-bg);
             border: none;
             border-radius: 8px;
@@ -540,10 +553,6 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         @media (max-width: 768px) {
-            body {
-                padding: 15px;
-            }
-            
             .products-grid {
                 grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
                 gap: 16px;
@@ -560,6 +569,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
     </style>
 </head>
+<?php include "../includes/header.php"; ?>
 <body>
 <div class="container-fluid">
     <!-- Stats Section -->
@@ -583,7 +593,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
 
     <!-- Products Section -->
-    <div class="card mb-4">
+    <div class="card-container mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Products</h5>
             <div>
