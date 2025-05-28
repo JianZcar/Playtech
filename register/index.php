@@ -236,7 +236,7 @@ function validateInputs($fname, $mname, $lname, $email, $mobile, $password) {
                 </div>
                 <button type="submit" class="btn btn-primary btn-block mt-4">Submit</button>
             </form>
-            <p class="mt-3 text-center">Already have an account? <a href="../login/login.php">Login here</a></p>
+            <p class="mt-3 text-center">Already have an account? <a href="/login">Login here</a></p>
         </div>
     </div>
 </div>
