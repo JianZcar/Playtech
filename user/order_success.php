@@ -5,6 +5,7 @@ $order_id = $_GET['order_id'] ?? null;
 <html>
 <head>
     <title>Order Successful</title>
+    <link rel="icon" href="../favicon.ico" type="image/x-icon" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-dark text-light text-center py-5">
