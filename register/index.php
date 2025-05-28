@@ -208,6 +208,7 @@ function validateInputs($fname, $mname, $lname, $email, $mobile, $password) {
                 </div>
                 <button type="submit" class="btn btn-primary btn-block mt-4">Submit</button>
             </form>
+            <p>Already have an account? <a href="/login/">Login here<a></p>
         </div>
     </div>
 </div>

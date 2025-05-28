@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['email'] = $user['email'];
 
             $activity = "Login";
-            $audit_sql = "INSERT INTO audit_trail (email, activity, login) VALUES (:email, :activity, 'Y')";
+            $audit_sql = "INSERT INTO audit_trail (email, activity, login) VALUES (:email, :activity, 1)";
             $audit_stmt = $conn->prepare($audit_sql);
             $audit_stmt->bindParam(':email', $email);
             $audit_stmt->bindParam(':activity', $activity);
@@ -163,6 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <button type="submit" class="btn btn-primary btn-block mt-3">Login</button>
       </form>
+      <p>Don't have an account? <a href="/register/">Register here</a></p>
     </div>
   </div>
 </div>
