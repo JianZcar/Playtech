@@ -77,6 +77,95 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['fetch']) && $_GET['fetc
     exit;
 }
 
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'details' && isset($_GET['product_id'])) {
+    header('Content-Type: application/json');
+    
+    try {
+        $productId = $_GET['product_id'];
+        
+        // Fetch product details
+        $stmt = $conn->prepare("
+            SELECT p.*, c.name AS category_name 
+            FROM products p 
+            LEFT JOIN categories c ON p.category_id = c.id 
+            WHERE p.id = ?
+        ");
+        $stmt->execute([$productId]);
+        $product = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$product) {
+            throw new Exception('Product not found');
+        }
+        
+        // Fetch sales stats
+        $stmt = $conn->prepare("
+            SELECT 
+                SUM(oi.quantity) AS total_sold,
+                SUM(oi.quantity * oi.price) AS total_revenue
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.id
+            WHERE oi.product_id = ? AND o.status IN (2,3)  -- Only shipped/delivered orders
+        ");
+        $stmt->execute([$productId]);
+        $salesData = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Fetch current cart quantity
+        $stmt = $conn->prepare("SELECT SUM(quantity) AS in_carts FROM cart WHERE product_id = ?");
+        $stmt->execute([$productId]);
+        $cartData = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Fetch inventory logs
+        $stmt = $conn->prepare("
+            SELECT il.*, a.name AS admin_name
+            FROM inventory_logs il
+            LEFT JOIN admins a ON il.admin_id = a.id
+            WHERE il.product_id = ?
+            ORDER BY il.date_logged DESC
+            LIMIT 5
+        ");
+        $stmt->execute([$productId]);
+        $inventoryLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Prepare response
+        $response = [
+            'status' => 'success',
+            'product' => [
+                'id' => $product['id'],
+                'name' => htmlspecialchars($product['name']),
+                'description' => htmlspecialchars($product['description']),
+                'price' => number_format($product['price'], 2),
+                'category' => htmlspecialchars($product['category_name']),
+                'stock' => $product['stock'],
+                'image' => base64_encode($product['image'])
+            ],
+            'stats' => [
+                'total_sold' => $salesData['total_sold'] ?: 0,
+                'total_revenue' => number_format($salesData['total_revenue'] ?: 0, 2),
+                'in_carts' => $cartData['in_carts'] ?: 0
+            ],
+            'inventory_logs' => array_map(function($log) {
+                return [
+                    'action' => match($log['action']) {
+                        0 => 'Add',
+                        1 => 'Remove',
+                        2 => 'Adjust',
+                        default => 'Unknown'
+                    },
+                    'quantity' => $log['quantity'],
+                    'admin' => $log['admin_name'] ?: 'System',
+                    'date' => date('M d, Y h:i A', strtotime($log['date_logged']))
+                ];
+            }, $inventoryLogs)
+        ];
+        
+        echo json_encode($response);
+    } catch (Exception $e) {
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+    }
+    exit;
+}
+
 // Fetch stats
 $stats = [];
 foreach (['users', 'products', 'orders', 'categories'] as $table) {
@@ -385,6 +474,30 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
 
     <!-- Modals -->
+
+    <!-- Product Details Modal -->
+    <div class="modal fade" id="productDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Product Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="productDetailsContent">
+                    <!-- Content will be loaded by AJAX -->
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="editProductBtn">Edit</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Add Category Modal -->
     <div class="modal fade" id="addCategoryModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
@@ -431,11 +544,9 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <div class="col-md-6">
                                 <label class="form-label">Category</label>
                                 <select name="category_id" class="form-select" required>
-                                    <option value="">Select Category</option>
-                                    <option value="1">Electronics</option>
-                                    <option value="2">Clothing</option>
-                                    <option value="3">Home & Kitchen</option>
-                                    <option value="4">Books</option>
+                                <?php foreach ($categories as $cat): ?>
+                                    <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?></option>
+                                <?php endforeach; ?>
                                 </select>
                             </div>
                         </div>
@@ -447,12 +558,12 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
-                                <label class="form-label">Price ($)</label>
-                                <input type="number" step="0.01" min="0" name="price" class="form-control" placeholder="29.99" required>
+                                <label class="form-label">Price (₱)</label>
+                                <input type="number" step="1" min="0" name="price" class="form-control" placeholder="29.99" required>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Stock</label>
-                                <input type="number" min="0" name="stock" class="form-control" placeholder="50" required>
+                                <input type="number" min="0" step="1" name="stock" class="form-control" placeholder="50" required>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Product Image</label>
@@ -482,6 +593,115 @@ $(function(){
     $('#openAddCategory').on('click', function () {  
         $('#addCategoryModal').modal('show');
     });
+
+    $(document).on('click', '.product-card', function() {
+        const productId = $(this).data('id');
+        currentProductId = productId;
+        
+        const modal = new bootstrap.Modal(document.getElementById('productDetailsModal'));
+        modal.show();
+        
+        // Load product details
+        $.get(`<?= $_SERVER['PHP_SELF'] ?>?action=details&product_id=${productId}`, function(data) {
+            if (data.status === 'success') {
+                const p = data.product;
+                const stats = data.stats;
+                
+                let logsHtml = '';
+                data.inventory_logs.forEach(log => {
+                    logsHtml += `<tr>
+                        <td>${log.action}</td>
+                        <td>${log.quantity}</td>
+                        <td>${log.admin}</td>
+                        <td>${log.date}</td>
+                    </tr>`;
+                });
+                
+                const html = `
+                    <div class="row">
+                        <div class="col-md-4">
+                            <img src="data:image/jpeg;base64,${p.image}" alt="${p.name}" class="img-fluid rounded">
+                        </div>
+                        <div class="col-md-8">
+                            <h3>${p.name}</h3>
+                            <p class="text-muted">${p.category}</p>
+                            <p>${p.description}</p>
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5>₱${p.price}</h5>
+                                    <p>Stock: ${p.stock}</p>
+                                </div>
+                                <div>
+                                    <p>Total Sold: ${stats.total_sold}</p>
+                                    <p>Revenue: ₱${stats.total_revenue}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h5>Inventory Logs</h5>
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Action</th>
+                                        <th>Qty</th>
+                                        <th>Admin</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${logsHtml}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Quick Stats</h5>
+                            <ul class="list-group">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Currently in carts
+                                    <span class="badge bg-primary rounded-pill">${stats.in_carts}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Available stock
+                                    <span class="badge ${p.stock > 10 ? 'bg-success' : 'bg-warning'} rounded-pill">${p.stock}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Total revenue
+                                    <span class="badge bg-info rounded-pill">₱${stats.total_revenue}</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                $('#productDetailsContent').html(html);
+            } else {
+                $('#productDetailsContent').html(`<p class="text-danger">${data.message}</p>`);
+            }
+        });
+    });
+
+    $('#productDetailsModal').on('hidden.bs.modal', function () {
+        $('#productDetailsContent').html(`
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        `);
+        currentProductId = null;
+    });
+
+    // Edit button handler
+    $('#editProductBtn').click(function() {
+        if (currentProductId) {
+            alert('Edit product ID: ' + currentProductId);
+            // Here you would open your edit modal for the product
+            // For example: openEditProductModal(currentProductId);
+        }
+    });
+
     const productsContainer = $('#productsContainer');
 
     // Function to create product cards HTML from product array
@@ -490,13 +710,13 @@ $(function(){
             return `<p class="text-center text-muted">No products found.</p>`;
         }
         return products.map(p => `
-           <div class="product-card card">
+           <div class="product-card card" data-id="${p.id}">
                 <img src="data:image/jpeg;base64,${p.image}" alt="${p.name}" class="product-img card-img-top">
                 <div class="card-body">
                     <h6>${p.name}</h6>
                     <small>${p.category}</small>
                     <p>${p.description}</p>
-                    <span>$${p.price}</span>
+                    <span>₱${p.price}</span>
                 </div>
             </div>
         `).join('');
@@ -519,7 +739,7 @@ $(function(){
     fetchProducts();
 
     // Refresh every 10 seconds
-    setInterval(fetchProducts, 10000);
+    setInterval(fetchProducts, 60000);
     // Add Category form submit
     $("#categoryForm").submit(function(e){
         e.preventDefault();
