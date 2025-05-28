@@ -7,7 +7,6 @@ require_once 'cart_logic.php';
 <head>
   <meta charset="UTF-8">
   <title>Shopping Cart</title>
-  <link rel="icon" href="../favicon.ico" type="image/x-icon" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body {
@@ -44,22 +43,6 @@ require_once 'cart_logic.php';
       padding: 16px;
       vertical-align: middle;
       border-bottom: 1px solid #444;
-    }
-
-    .cart-table thead th:first-child {
-      border-top-left-radius: 12px;
-    }
-
-    .cart-table thead th:last-child {
-      border-top-right-radius: 12px;
-    }
-
-    .cart-table tbody tr:last-child td:first-child {
-      border-bottom-left-radius: 12px;
-    }
-
-    .cart-table tbody tr:last-child td:last-child {
-      border-bottom-right-radius: 12px;
     }
 
     .product-info {
@@ -119,6 +102,12 @@ require_once 'cart_logic.php';
     .return-btn {
       margin-top: 0;
     }
+
+    .delete-btn {
+      font-size: 1.3rem;
+      padding: 0 0.6rem;
+      line-height: 1;
+    }
   </style>
 </head>
 <body>
@@ -133,6 +122,7 @@ require_once 'cart_logic.php';
           <tr>
             <th>Product</th>
             <th style="text-align: center;">Quantity</th>
+            <th style="text-align: center;">Action</th>
             <th style="text-align: right;">Subtotal</th>
           </tr>
         </thead>
@@ -154,10 +144,15 @@ require_once 'cart_logic.php';
                 </div>
               </td>
               <td style="text-align: center;">
-              <input type="number" min="1" value="<?= $item['quantity'] ?>" 
-                class="quantity-input" 
-                data-cart-id="<?= $item['cart_id'] ?>" 
-                data-price="<?= $item['price'] ?>">
+                <input type="number" min="1" value="<?= $item['quantity'] ?>" 
+                  class="quantity-input" 
+                  data-cart-id="<?= $item['cart_id'] ?>" 
+                  data-price="<?= $item['price'] ?>">
+              </td>
+              <td style="text-align: center;">
+                <button class="btn btn-outline-danger btn-sm delete-btn" data-cart-id="<?= $item['cart_id'] ?>" title="Remove">
+                  &times;
+                </button>
               </td>
               <td style="text-align: right;">
                 $<?= number_format($item['price'] * $item['quantity'], 2) ?>
@@ -174,50 +169,90 @@ require_once 'cart_logic.php';
 
       <div class="d-flex justify-content-between mt-4">
         <a href="index.php" class="btn btn-outline-info return-btn">← Return to Dashboard</a>
-        <a href="checkout.php" class="btn btn-outline-info">Proceed to Checkout &#36;</a>
-    </div>
+        <div>
+          <button id="clear-cart-btn" class="btn btn-outline-danger me-2">Clear Cart</button>
+          <a href="checkout.php" class="btn btn-outline-info">Proceed to Checkout &#36;</a>
+        </div>
+      </div>
     <?php endif; ?>
   </div>
 
   <script>
-document.querySelectorAll('.quantity-input').forEach(input => {
-  input.addEventListener('change', function () {
-    const cartId = this.dataset.cartId;
-    const price = parseFloat(this.dataset.price);
-    const quantity = parseInt(this.value);
-    const row = this.closest('tr');
+    document.querySelectorAll('.quantity-input').forEach(input => {
+      input.addEventListener('change', function () {
+        const cartId = this.dataset.cartId;
+        const price = parseFloat(this.dataset.price);
+        const quantity = parseInt(this.value);
+        const row = this.closest('tr');
 
-    if (quantity < 1) {
-      this.value = 1;
-      return;
-    }
-
-    // Update subtotal for this row
-    const subtotalCell = row.querySelector('td:last-child');
-    const newSubtotal = (price * quantity).toFixed(2);
-    subtotalCell.textContent = `$${newSubtotal}`;
-
-    // Update cart in backend
-    fetch('update_cart_quantity.php', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: `cart_id=${cartId}&quantity=${quantity}`
-    }).then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          document.querySelector('.cart-summary div:first-child').innerHTML =
-            `<strong>Subtotal:</strong> $${data.subtotal.toFixed(2)}`;
-          document.querySelector('.cart-summary div:last-child').innerHTML =
-            `<strong>Total:</strong> $${data.total.toFixed(2)}`;
-        } else {
-          alert('Failed to update quantity.');
+        if (quantity < 1) {
+          this.value = 1;
+          return;
         }
-      });
-  });
-});
-</script>
 
+        // Update subtotal for this row
+        const subtotalCell = row.querySelector('td:nth-child(4)');
+        const newSubtotal = (price * quantity).toFixed(2);
+        subtotalCell.textContent = `$${newSubtotal}`;
+
+        // Update cart in backend
+        fetch('update_cart_quantity.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: `cart_id=${cartId}&quantity=${quantity}`
+        }).then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              document.querySelector('.cart-summary div:first-child').innerHTML =
+                `<strong>Subtotal:</strong> $${data.subtotal.toFixed(2)}`;
+              document.querySelector('.cart-summary div:last-child').innerHTML =
+                `<strong>Total:</strong> $${data.total.toFixed(2)}`;
+            } else {
+              alert('Failed to update quantity.');
+            }
+          });
+      });
+    });
+
+    document.querySelectorAll('.delete-btn').forEach(button => {
+      button.addEventListener('click', function () {
+        if (!confirm('Are you sure you want to delete this item?')) return;
+
+        const cartId = this.dataset.cartId;
+
+        fetch('delete_cart_item.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: `cart_id=${cartId}`
+        }).then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              location.reload();
+            } else {
+              alert(data.message || 'Failed to delete item.');
+            }
+          });
+      });
+    });
+
+    document.getElementById('clear-cart-btn')?.addEventListener('click', function () {
+      if (!confirm('Are you sure you want to clear the cart?')) return;
+
+      fetch('clear_cart.php', {
+        method: 'POST'
+      }).then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            location.reload();
+          } else {
+            alert(data.message || 'Failed to clear cart.');
+          }
+        });
+    });
+  </script>
 </body>
 </html>
