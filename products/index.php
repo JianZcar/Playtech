@@ -3,6 +3,7 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
 include "../connection/connect.php";
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -199,7 +200,6 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
             background: var(--dark-bg);
             color: var(--text);
             font-family: 'Segoe UI', system-ui, sans-serif;
-            padding: 30px;
             min-height: 100vh;
         }
 
@@ -457,6 +457,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </style>
 </head>
 <body>
+<?php include "../includes/header.php"; ?>
 <div class="container-fluid">
     <!-- Products Section -->
     <div class="card mb-4">
