@@ -67,16 +67,28 @@ try {
     $totalSpendings = $stmt->fetchColumn() ?? 0;
 
     // Recent orders
-    $stmt = $conn->prepare("SELECT id, total_price, status, order_date FROM orders WHERE user_id = ? ORDER BY order_date DESC LIMIT 5");
+    $stmt = $conn->prepare("
+        SELECT o.id, o.total_price, o.status, o.order_date, 
+            (SELECT p.name 
+            FROM order_items oi 
+            JOIN products p ON oi.product_id = p.id 
+            WHERE oi.order_id = o.id LIMIT 1) AS product_name
+        FROM orders o
+        WHERE o.user_id = ?
+        ORDER BY o.order_date DESC
+        LIMIT 5
+        ");
     $stmt->execute([$userId]);
+
     $recentOrders = [];
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $orderDate = new DateTime($row['order_date'], new DateTimeZone('UTC'));
-        $orderDate->setTimezone(new DateTimeZone('Asia/Manila'));
-        $row['order_date'] = $orderDate->format('g:i A | M d, Y');
-        $recentOrders[] = $row;
+    $orderDate = new DateTime($row['order_date'], new DateTimeZone('UTC'));
+    $orderDate->setTimezone(new DateTimeZone('Asia/Manila'));
+    $row['order_date'] = $orderDate->format('g:i A | M d, Y');
+    $recentOrders[] = $row;
     }
     $hasRecentOrders = count($recentOrders) > 0;
+
 
     // Activity log
     $stmt = $conn->prepare("SELECT activity, register FROM audit_trail WHERE email = ? ORDER BY id DESC LIMIT 5");
