@@ -2,6 +2,9 @@
 session_start();
 require_once '../connection/connect.php';
 
+// Set timezone
+date_default_timezone_set('Asia/Manila');
+
 // Redirect if not logged in
 if (!isset($_SESSION['user_id'])) {
     header('Location: ../login.php');
@@ -27,15 +30,21 @@ try {
     $stmt->execute([$userId]);
     $orderCount = $stmt->fetchColumn();
 
-    // Total spendings
-    $stmt = $conn->prepare("SELECT SUM(total_price) FROM orders WHERE user_id = ? AND status IN ('Paid', 'Shipped', 'Delivered')");
+    // Total spendings (status: 1=Paid, 2=Shipped, 3=Delivered)
+    $stmt = $conn->prepare("SELECT SUM(total_price) FROM orders WHERE user_id = ? AND status IN (1, 2, 3)");
     $stmt->execute([$userId]);
     $totalSpendings = $stmt->fetchColumn() ?? 0;
 
     // Recent orders
     $stmt = $conn->prepare("SELECT id, total_price, status, order_date FROM orders WHERE user_id = ? ORDER BY order_date DESC LIMIT 5");
     $stmt->execute([$userId]);
-    $recentOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $recentOrders = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $orderDate = new DateTime($row['order_date'], new DateTimeZone('UTC'));
+        $orderDate->setTimezone(new DateTimeZone('Asia/Manila'));
+        $row['order_date'] = $orderDate->format('g:i A | M d, Y');
+        $recentOrders[] = $row;
+    }
     $hasRecentOrders = count($recentOrders) > 0;
 
     // Activity log
@@ -43,13 +52,22 @@ try {
     $stmt->execute([$email]);
     $activities = [];
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $activities[] = $row['activity'] . ' - ' . date('g:i A', strtotime($row['register']));
+        $activityTime = new DateTime($row['register'], new DateTimeZone('UTC'));
+        $activityTime->setTimezone(new DateTimeZone('Asia/Manila'));
+        $formattedTime = $activityTime->format('g:i A | M d, Y');
+        $activities[] = $row['activity'] . ' - ' . $formattedTime;
     }
 
-    // Contact messages (visible to all users)
-    $stmt = $conn->prepare("SELECT message, date_sent FROM contact_messages ORDER BY date_sent DESC LIMIT 5");
+    // Contact messages
+    $stmt = $conn->prepare("SELECT name, message, date_sent FROM contact_messages ORDER BY date_sent DESC LIMIT 5");
     $stmt->execute();
-    $contactMessages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $contactMessages = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $sentDate = new DateTime($row['date_sent'], new DateTimeZone('UTC'));
+        $sentDate->setTimezone(new DateTimeZone('Asia/Manila'));
+        $row['date_sent'] = $sentDate->format('g:i A | M d, Y');
+        $contactMessages[] = $row;
+    }
     $hasContactMessages = count($contactMessages) > 0;
 
 } catch (PDOException $e) {
