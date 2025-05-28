@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $audit_stmt->execute();
 
 
-            header("Location: index.php");
+            header("Location: ../");
             exit(); 
         } else {
             echo "Invalid email or password.";
@@ -163,7 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <button type="submit" class="btn btn-primary btn-block mt-3">Login</button>
       </form>
-      <p>Don't have an account? <a href="/register/">Register here</a></p>
+      <p>Don't have an account? <a href="../register">Register here</a></p>
     </div>
   </div>
 </div>
