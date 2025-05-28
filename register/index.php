@@ -1,3 +1,84 @@
+<?php
+include "../connection/connect.php"; 
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $fname = trim($_POST['fname']);
+    $mname = trim($_POST['mname']);
+    $lname = trim($_POST['lname']);
+    $email = trim($_POST['email']);
+    $mobile = trim($_POST['mobile']);
+    $password = $_POST['password'];
+
+
+    $validation_errors = validateInputs($fname, $mname, $lname, $email, $mobile, $password);
+
+    if (!empty($validation_errors)) {
+        foreach ($validation_errors as $error) {
+            echo "<script>showModalMessage('" . htmlspecialchars($error, ENT_QUOTES) . "', 'red');</script>";
+        }
+        exit();
+    }
+
+    $hashed_password = password_hash($password, PASSWORD_BCRYPT);
+
+    try {
+        $sql = "INSERT INTO users (fname, mname, lname, email, mobile, password)
+                VALUES (:fname, :mname, :lname, :email, :mobile, :password)";
+        $stmt = $conn->prepare($sql);
+
+        $stmt->bindParam(':fname', $fname);
+        $stmt->bindParam(':mname', $mname);
+        $stmt->bindParam(':lname', $lname);
+        $stmt->bindParam(':email', $email);
+        $stmt->bindParam(':mobile', $mobile);
+        $stmt->bindParam(':password', $hashed_password);
+
+
+        if ($stmt->execute()) {
+            echo "<script>showModalMessage('Registration successful!', 'green', '../login/login.php');</script>";
+
+            $activity = "Registered";
+            $audit_sql = "INSERT INTO audit_trail (email, activity, register)
+                          VALUES (:email, :activity, NOW())";
+            $audit_stmt = $conn->prepare($audit_sql);
+            $audit_stmt->bindParam(':email', $email);
+            $audit_stmt->bindParam(':activity', $activity);
+            $audit_stmt->execute();
+        } else {
+            echo "<script>showModalMessage('Error occurred: " . implode(", ", $stmt->errorInfo()) . "', 'red');</script>";
+        }
+    } catch (PDOException $e) {
+        echo "<script>showModalMessage('Database error: " . htmlspecialchars($e->getMessage(), ENT_QUOTES) . "', 'red');</script>";
+    }
+}
+
+function validateInputs($fname, $mname, $lname, $email, $mobile, $password) {
+    $errors = [];
+    $namePattern = "/^[A-Za-z]+(?: [A-Za-z]+)?$/";
+
+    if (!preg_match($namePattern, $fname)) {
+        $errors[] = "First name must contain only letters and be either 1 or 2 names separated by a space.";
+    }
+    if (!empty($mname) && !preg_match($namePattern, $mname)) {
+        $errors[] = "Middle name must contain only letters and be either 1 or 2 names separated by a space.";
+    }
+    if (!preg_match($namePattern, $lname)) {
+        $errors[] = "Last name must contain only letters and be either 1 or 2 names separated by a space.";
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = "Invalid email format.";
+    }
+    if (!preg_match("/^\+63\d{10}$/", $mobile)) {
+        $errors[] = "Mobile number must start with +63 and contain 10 digits after that (e.g., +639123456789).";
+    }
+    if (!preg_match("/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).{8,}$/", $password)) {
+        $errors[] = "Password must be at least 8 characters long, and include at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special symbol.";
+    }
+
+    return $errors;
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -167,85 +248,3 @@
 
 </body>
 </html>
-
-
-<?php
-include "../connection/connect.php"; 
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $fname = trim($_POST['fname']);
-    $mname = trim($_POST['mname']);
-    $lname = trim($_POST['lname']);
-    $email = trim($_POST['email']);
-    $mobile = trim($_POST['mobile']);
-    $password = $_POST['password'];
-
-
-    $validation_errors = validateInputs($fname, $mname, $lname, $email, $mobile, $password);
-
-    if (!empty($validation_errors)) {
-        foreach ($validation_errors as $error) {
-            echo "<script>showModalMessage('" . htmlspecialchars($error, ENT_QUOTES) . "', 'red');</script>";
-        }
-        exit();
-    }
-
-    $hashed_password = password_hash($password, PASSWORD_BCRYPT);
-
-    try {
-        $sql = "INSERT INTO users (fname, mname, lname, email, mobile, password)
-                VALUES (:fname, :mname, :lname, :email, :mobile, :password)";
-        $stmt = $conn->prepare($sql);
-
-        $stmt->bindParam(':fname', $fname);
-        $stmt->bindParam(':mname', $mname);
-        $stmt->bindParam(':lname', $lname);
-        $stmt->bindParam(':email', $email);
-        $stmt->bindParam(':mobile', $mobile);
-        $stmt->bindParam(':password', $hashed_password);
-
-
-        if ($stmt->execute()) {
-            echo "<script>showModalMessage('Registration successful!', 'green', '../login/login.php');</script>";
-
-            $activity = "Registered";
-            $audit_sql = "INSERT INTO audit_trail (email, activity, register)
-                          VALUES (:email, :activity, NOW())";
-            $audit_stmt = $conn->prepare($audit_sql);
-            $audit_stmt->bindParam(':email', $email);
-            $audit_stmt->bindParam(':activity', $activity);
-            $audit_stmt->execute();
-        } else {
-            echo "<script>showModalMessage('Error occurred: " . implode(", ", $stmt->errorInfo()) . "', 'red');</script>";
-        }
-    } catch (PDOException $e) {
-        echo "<script>showModalMessage('Database error: " . htmlspecialchars($e->getMessage(), ENT_QUOTES) . "', 'red');</script>";
-    }
-}
-
-function validateInputs($fname, $mname, $lname, $email, $mobile, $password) {
-    $errors = [];
-    $namePattern = "/^[A-Za-z]+(?: [A-Za-z]+)?$/";
-
-    if (!preg_match($namePattern, $fname)) {
-        $errors[] = "First name must contain only letters and be either 1 or 2 names separated by a space.";
-    }
-    if (!empty($mname) && !preg_match($namePattern, $mname)) {
-        $errors[] = "Middle name must contain only letters and be either 1 or 2 names separated by a space.";
-    }
-    if (!preg_match($namePattern, $lname)) {
-        $errors[] = "Last name must contain only letters and be either 1 or 2 names separated by a space.";
-    }
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = "Invalid email format.";
-    }
-    if (!preg_match("/^\+63\d{10}$/", $mobile)) {
-        $errors[] = "Mobile number must start with +63 and contain 10 digits after that (e.g., +639123456789).";
-    }
-    if (!preg_match("/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).{8,}$/", $password)) {
-        $errors[] = "Password must be at least 8 characters long, and include at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special symbol.";
-    }
-
-    return $errors;
-}
-?>
