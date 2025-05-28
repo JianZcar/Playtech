@@ -123,12 +123,15 @@
         </div>
       </div>
       <div class="col-md-3">
-        <div class="stat-box">
-          <i class="bi bi-bag-check fs-2 text-info"></i>
+          <a href="orders.php" class="text-decoration-none">
+          <div class="stat-box">
+            <i class="bi bi-bag-check fs-2 text-info"></i>
           <h3><?= $orderCount ?></h3>
-          <p>Total Orders</p>
-        </div>
+            <p>Total Orders</p>
+          </div>
+          </a>
       </div>
+
       <div class="col-md-3">
         <div class="stat-box">
           <i class="bi bi-currency-dollar fs-2 text-info"></i>
@@ -149,7 +152,7 @@
                   $limitedOrders = array_slice($recentOrders, 0, 5);
                   foreach ($limitedOrders as $order): ?>
                   <li class="list-group-item bg-transparent text-white">
-                    #<?= $order['id'] ?> - <?= $order['status'] ?> - ₱<?= number_format($order['total_price'], 2) ?>
+                    #<?= $order['id'] ?> - <?= $order['status'] ?> - <?= htmlspecialchars($order['product_name'] ?? 'Unknown') ?> - ₱<?= number_format($order['total_price'], 2) ?>
                   </li>
                 <?php endforeach; ?>
               <?php else: ?>
