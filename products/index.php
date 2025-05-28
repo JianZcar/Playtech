@@ -28,22 +28,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 throw new Exception('Product not found');
             }
             
-            // Check if item already in cart
-            $stmt = $conn->prepare("SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ?");
-            $stmt->execute([$userId, $productId]);
-            $existingItem = $stmt->fetch();
-            
-            if ($existingItem) {
-                // Update quantity if already in cart
-                $newQuantity = $existingItem['quantity'] + $quantity;
-                $stmt = $conn->prepare("UPDATE cart SET quantity = ?, date_added = NOW() WHERE id = ?");
-                $stmt->execute([$newQuantity, $existingItem['id']]);
-            } else {
-                // Add new item to cart
-                $stmt = $conn->prepare("INSERT INTO cart (user_id, product_id, quantity, date_added) VALUES (?, ?, ?, NOW())");
-                $stmt->execute([$userId, $productId, $quantity]);
-            }
-            
+
+            // Add new item to cart
+            $stmt = $conn->prepare("INSERT INTO cart (user_id, product_id, quantity, date_added) VALUES (?, ?, ?, NOW())");
+            $stmt->execute([$userId, $productId, $quantity]);
+        
             echo json_encode(['status' => 'success', 'message' => 'Product added to cart']);
         } catch (Exception $e) {
             echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
@@ -588,9 +577,9 @@ $(function(){
 		// Add to cart button
 		$(document).on('click', '.add-to-cart-btn', function(e) {
 				e.stopPropagation(); // Prevent triggering the product details modal
-				const card = $(this).closest('.product-card');
 				const productId = addtocart;
-				const quantity = card.find('.quantity-input').val();
+				const quantity = $('#productDetailsContent').find('.quantity-input').val();
+				console.log(quantity)
 				
 				$.post('', {
 				    action: 'add_to_cart',
