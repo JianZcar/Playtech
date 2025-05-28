@@ -7,7 +7,7 @@ date_default_timezone_set('Asia/Manila');
 
 // Redirect if not logged in
 if (!isset($_SESSION['user_id'])) {
-    header('Location: ../login.php');
+    header('Location: ../login');
     exit();
 }
 

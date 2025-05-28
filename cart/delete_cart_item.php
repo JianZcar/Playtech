@@ -1,5 +1,5 @@
 <?php
-require_once 'logic.php';
+require_once '../includes/logic.php';
 
 if (!isset($_SESSION['email'])) {
     echo json_encode(['success' => false, 'message' => 'Not logged in']);
@@ -7,6 +7,12 @@ if (!isset($_SESSION['email'])) {
 }
 
 $email = $_SESSION['email'];
+$cart_id = $_POST['cart_id'] ?? null;
+
+if (!$cart_id) {
+    echo json_encode(['success' => false, 'message' => 'Invalid cart ID']);
+    exit;
+}
 
 // Get user ID
 $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
@@ -18,8 +24,8 @@ if (!$user_id) {
     exit;
 }
 
-// Delete all items from cart
-$clear_stmt = $conn->prepare("DELETE FROM cart WHERE user_id = ?");
-$clear_stmt->execute([$user_id]);
+// Delete item from cart
+$delete_stmt = $conn->prepare("DELETE FROM cart WHERE id = ? AND user_id = ?");
+$delete_stmt->execute([$cart_id, $user_id]);
 
 echo json_encode(['success' => true]);

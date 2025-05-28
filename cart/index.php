@@ -8,6 +8,7 @@ require_once 'cart_logic.php';
   <meta charset="UTF-8">
   <title>Shopping Cart</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
   <style>
     body {
       margin: 0;
@@ -108,8 +109,12 @@ require_once 'cart_logic.php';
       padding: 0 0.6rem;
       line-height: 1;
     }
+    .container-fluid {
+        max-width: 1400px;
+    }
   </style>
 </head>
+<?php include "../includes/header.php"; ?>
 <body>
   <div class="dashboard-wrapper">
     <h2 class="mb-4">Your Shopping Cart</h2>

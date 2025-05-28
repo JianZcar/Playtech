@@ -1,4 +1,4 @@
-<?php include 'logic.php'; ?>
+<?php include '../includes/logic.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -100,8 +100,13 @@
       overflow: visible !important;
       height: auto !important;
     }
+    
+    .container-fluid {
+        max-width: 1400px;
+    }
   </style>
 </head>
+<?php include "../includes/header.php"; ?>
 <body>
   <div class="container dashboard-wrapper">
     <div class="row mb-4">
@@ -116,7 +121,7 @@
     </div>
   </div>
       <div class="col-md-3">
-        <a href="cart.php" class="text-decoration-none">
+        <a href="../cart" class="text-decoration-none">
         <div class="stat-box">
             <i class="bi bi-cart4 fs-2 text-info"></i>
             <h3><?= $cartCount ?></h3>
@@ -125,7 +130,7 @@
           </a>
         </div>
       <div class="col-md-3">
-          <a href="orders.php" class="text-decoration-none">
+          <a href="../orders" class="text-decoration-none">
           <div class="stat-box">
             <i class="bi bi-bag-check fs-2 text-info"></i>
           <h3><?= $orderCount ?></h3>

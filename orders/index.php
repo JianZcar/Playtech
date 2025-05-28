@@ -1,5 +1,5 @@
 <?php
-require_once 'logic.php';
+require_once '../includes/logic.php';
 
 if (!isset($_SESSION['email'])) {
     die('User not logged in.');
@@ -51,6 +51,7 @@ foreach ($results as $row) {
   <title>Your Orders</title>
   <link rel="icon" href="../favicon.ico" type="image/x-icon" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
   <link rel="icon" href="../favicon.ico" type="image/x-icon" />
   <style>
     body {
@@ -144,12 +145,18 @@ foreach ($results as $row) {
       pointer-events: none;
       cursor: default;
     }
+    
+    .container-fluid {
+            max-width: 1400px;
+    }
+    
   </style>
 </head>
+<?php include "../includes/header.php"; ?>
 <body>
   <div class="dashboard-wrapper">
     <h2 class="mb-4">Your Orders</h2>
-      <a href="index.php" class="btn btn-outline-info mb-4">&larr; Return to Dashboard</a>
+      <a href="../dashboard" class="btn btn-outline-info mb-4">&larr; Return to Dashboard</a>
 
 
     <?php if (empty($orders)): ?>

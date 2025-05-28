@@ -1,5 +1,5 @@
 <?php
-require_once 'logic.php';
+require_once '../includes/logic.php';
 
 if (!isset($_SESSION['email'])) {
     die('User not logged in.');

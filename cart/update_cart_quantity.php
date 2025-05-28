@@ -1,5 +1,5 @@
 <?php
-require_once 'logic.php';
+require_once '../includes/logic.php';
 
 if (!isset($_SESSION['email'])) {
     echo json_encode(['success' => false, 'message' => 'Not logged in']);
