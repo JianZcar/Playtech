@@ -9,13 +9,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $mobile = trim($_POST['mobile']);
     $password = $_POST['password'];
 
-
     $validation_errors = validateInputs($fname, $mname, $lname, $email, $mobile, $password);
 
     if (!empty($validation_errors)) {
-        foreach ($validation_errors as $error) {
-            echo "<script>showModalMessage('" . htmlspecialchars($error, ENT_QUOTES) . "', 'red');</script>";
-        }
+        echo json_encode(['status' => 'error', 'errors' => $validation_errors]);
         exit();
     }
 
@@ -33,10 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bindParam(':mobile', $mobile);
         $stmt->bindParam(':password', $hashed_password);
 
-
         if ($stmt->execute()) {
-            echo "<script>showModalMessage('Registration successful!', 'green', '../login/login.php');</script>";
-
             $activity = "Registered";
             $audit_sql = "INSERT INTO audit_trail (email, activity, register)
                           VALUES (:email, :activity, NOW())";
@@ -44,12 +38,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $audit_stmt->bindParam(':email', $email);
             $audit_stmt->bindParam(':activity', $activity);
             $audit_stmt->execute();
+            
+            echo json_encode(['status' => 'success', 'message' => 'Registration successful!', 'redirect' => '/login']);
         } else {
-            echo "<script>showModalMessage('Error occurred: " . implode(", ", $stmt->errorInfo()) . "', 'red');</script>";
+            echo json_encode(['status' => 'error', 'message' => 'Database error occurred']);
         }
     } catch (PDOException $e) {
-        echo "<script>showModalMessage('Database error: " . htmlspecialchars($e->getMessage(), ENT_QUOTES) . "', 'red');</script>";
+        echo json_encode(['status' => 'error', 'message' => 'Database error: ' . $e->getMessage()]);
     }
+    exit();
 }
 
 function validateInputs($fname, $mname, $lname, $email, $mobile, $password) {
@@ -57,22 +54,22 @@ function validateInputs($fname, $mname, $lname, $email, $mobile, $password) {
     $namePattern = "/^[A-Za-z]+(?: [A-Za-z]+)?$/";
 
     if (!preg_match($namePattern, $fname)) {
-        $errors[] = "First name must contain only letters and be either 1 or 2 names separated by a space.";
+        $errors['fname'] = "First name must contain only letters and be either 1 or 2 names separated by a space.";
     }
     if (!empty($mname) && !preg_match($namePattern, $mname)) {
-        $errors[] = "Middle name must contain only letters and be either 1 or 2 names separated by a space.";
+        $errors['mname'] = "Middle name must contain only letters and be either 1 or 2 names separated by a space.";
     }
     if (!preg_match($namePattern, $lname)) {
-        $errors[] = "Last name must contain only letters and be either 1 or 2 names separated by a space.";
+        $errors['lname'] = "Last name must contain only letters and be either 1 or 2 names separated by a space.";
     }
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = "Invalid email format.";
+        $errors['email'] = "Invalid email format.";
     }
     if (!preg_match("/^\+63\d{10}$/", $mobile)) {
-        $errors[] = "Mobile number must start with +63 and contain 10 digits after that (e.g., +639123456789).";
+        $errors['mobile'] = "Mobile number must start with +63 and contain 10 digits after that (e.g., +639123456789).";
     }
     if (!preg_match("/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).{8,}$/", $password)) {
-        $errors[] = "Password must be at least 8 characters long, and include at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special symbol.";
+        $errors['password'] = "Password must be at least 8 characters long, and include at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special symbol.";
     }
 
     return $errors;
@@ -161,8 +158,33 @@ function validateInputs($fname, $mname, $lname, $email, $mobile, $password) {
     .btn-primary:hover {
         background: linear-gradient(to right, #198754, #0dcaf0);
     }
-</style>
 
+    .is-invalid {
+        border-color: #dc3545 !important;
+    }
+
+    .invalid-feedback {
+        color: #dc3545;
+        font-size: 0.85em;
+        margin-top: 5px;
+    }
+
+    #loadingOverlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.7);
+        z-index: 9999;
+    }
+
+    .spinner-border {
+        width: 3rem;
+        height: 3rem;
+    }
+</style>
 </head>
 <body>
 
@@ -181,40 +203,53 @@ function validateInputs($fname, $mname, $lname, $email, $mobile, $password) {
         <!-- Right Form Panel -->
         <div class="right-panel">
             <h3 class="text-center mb-4">Register</h3>
-            <form action="" method="POST">
+            <form id="registerForm" method="POST">
                 <div class="form-group">
                     <label for="fname">First Name</label>
                     <input type="text" id="fname" name="fname" class="form-control" required>
+                    <div class="invalid-feedback"></div>
                 </div>
                 <div class="form-group">
                     <label for="mname">Middle Name</label>
                     <input type="text" id="mname" name="mname" class="form-control">
+                    <div class="invalid-feedback"></div>
                 </div>
                 <div class="form-group">
                     <label for="lname">Last Name</label>
                     <input type="text" id="lname" name="lname" class="form-control" required>
+                    <div class="invalid-feedback"></div>
                 </div>
                 <div class="form-group">
                     <label for="email">Email</label>
                     <input type="email" id="email" name="email" class="form-control" required>
+                    <div class="invalid-feedback"></div>
                 </div>
                 <div class="form-group">
                     <label for="mobile">Mobile</label>
                     <input type="text" id="mobile" name="mobile" class="form-control" required>
+                    <div class="invalid-feedback"></div>
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
                     <input type="password" id="password" name="password" class="form-control" required>
+                    <div class="invalid-feedback"></div>
                 </div>
                 <button type="submit" class="btn btn-primary btn-block mt-4">Submit</button>
             </form>
-            <p>Already have an account? <a href="/login/">Login here<a></p>
+            <p class="mt-3 text-center">Already have an account? <a href="../login/login.php">Login here</a></p>
         </div>
     </div>
 </div>
 
-<!-- Transparent Bootstrap Modal -->
-<div class="modal fade" id="responseModal" tabindex="-1" aria-labelledby="responseModalLabel" aria-hidden="true">
+<!-- Loading Overlay -->
+<div id="loadingOverlay">
+    <div class="d-flex justify-content-center align-items-center h-100">
+        <div class="spinner-border text-primary"></div>
+    </div>
+</div>
+
+<!-- Response Modal -->
+<div class="modal fade" id="responseModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content bg-transparent border-0">
             <div class="modal-body text-center bg-light rounded shadow p-4">
@@ -224,28 +259,153 @@ function validateInputs($fname, $mname, $lname, $email, $mobile, $password) {
     </div>
 </div>
 
-
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- Modal Script -->
 <script>
-    function showModalMessage(message, color = 'green', redirectURL = null) {
-        const msgElem = document.getElementById("modalMessage");
-        msgElem.textContent = message;
-        msgElem.style.color = color;
-        $('#responseModal').modal('show');
+$(document).ready(function() {
+    // Real-time validation
+    $('#fname, #mname, #lname').on('input', function() {
+        validateNameField($(this));
+    });
 
-        // Auto-hide modal after 4 seconds
-        setTimeout(() => {
-            $('#responseModal').modal('hide');
-            if (redirectURL) {
-                window.location.href = redirectURL;
+    $('#email').on('input', function() {
+        const email = $(this).val();
+        const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        setValidationState(this, isValid, 'Invalid email format');
+        
+        // Check email availability if format is valid
+        if(isValid && email.length > 5) {
+            checkEmailAvailability(email);
+        }
+    });
+
+    $('#mobile').on('input', function() {
+        const isValid = /^\+63\d{0,10}$/.test($(this).val());
+        setValidationState(this, isValid, 'Must start with +63 followed by 10 digits');
+    });
+
+    $('#password').on('input', function() {
+        const isValid = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).{8,}$/.test($(this).val());
+        setValidationState(this, isValid, 'Requires 8+ chars with uppercase, lowercase, number, and symbol');
+    });
+
+    // Form submission handler
+    $('#registerForm').submit(function(e) {
+        e.preventDefault();
+        if(validateForm()) {
+            submitForm();
+        }
+    });
+});
+
+function validateNameField(field) {
+    const isValid = /^[A-Za-z]+(?: [A-Za-z]+)?$/.test(field.val());
+    setValidationState(field[0], isValid, 'Only letters and 1-2 names separated by space');
+}
+
+function setValidationState(field, isValid, message) {
+    const $field = $(field);
+    const $feedback = $field.next('.invalid-feedback');
+    
+    $field.toggleClass('is-invalid', !isValid);
+    
+    if(!isValid && $field.val().length > 0) {
+        $feedback.text(message);
+    } else {
+        $feedback.text('');
+    }
+}
+
+function checkEmailAvailability(email) {
+    $.post('../check_email.php', { email: email }, function(response) {
+        if(response.exists) {
+            const $email = $('#email');
+            $email.addClass('is-invalid');
+            $email.next('.invalid-feedback').text('Email already registered');
+        }
+    }, 'json');
+}
+
+function validateForm() {
+    let isValid = true;
+    
+    // Validate all fields
+    validateNameField($('#fname'));
+    validateNameField($('#lname'));
+    
+    const email = $('#email').val();
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    setValidationState($('#email')[0], emailValid, 'Invalid email format');
+    
+    const mobileValid = /^\+63\d{10}$/.test($('#mobile').val());
+    setValidationState($('#mobile')[0], mobileValid, 'Must start with +63 followed by 10 digits');
+    
+    const passwordValid = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).{8,}$/.test($('#password').val());
+    setValidationState($('#password')[0], passwordValid, 'Requires 8+ chars with uppercase, lowercase, number, and symbol');
+    
+    // Check if any field is invalid
+    $('.form-control').each(function() {
+        if($(this).hasClass('is-invalid')) {
+            isValid = false;
+        }
+    });
+    
+    return isValid;
+}
+
+function submitForm() {
+    showLoading(true);
+    
+    $.ajax({
+        url: '',
+        type: 'POST',
+        data: $('#registerForm').serialize(),
+        dataType: 'json',
+        success: function(response) {
+            if(response.status === 'success') {
+                showModal(response.message, 'green', response.redirect);
+            } else if(response.errors) {
+                // Display field-specific errors
+                for(const field in response.errors) {
+                    $(`#${field}`).addClass('is-invalid');
+                    $(`#${field}`).next('.invalid-feedback').text(response.errors[field]);
+                }
+            } else {
+                showModal(response.message || 'An error occurred', 'red');
             }
+        },
+        error: function(xhr) {
+            showModal('Error: ' + xhr.statusText, 'red');
+        },
+        complete: function() {
+            showLoading(false);
+        }
+    });
+}
+
+function showLoading(show) {
+    $('#loadingOverlay').toggle(show);
+}
+
+function showModal(message, color, redirectUrl = null) {
+    const $modal = $('#responseModal');
+    const $message = $('#modalMessage');
+    
+    $message.text(message).css('color', color);
+    $modal.modal('show');
+    
+    if(redirectUrl) {
+        setTimeout(function() {
+            $modal.modal('hide');
+            window.location.href = redirectUrl;
+        }, 2000);
+    } else {
+        setTimeout(function() {
+            $modal.modal('hide');
         }, 4000);
     }
+}
 </script>
-
-
 </body>
 </html>
