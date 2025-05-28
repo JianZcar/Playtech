@@ -193,7 +193,7 @@ function validateInputs($fname, $mname, $lname, $email, $mobile, $password) {
         <!-- Left Design Panel -->
         <div class="left-panel">
             <div class="text-center">
-                <img src="../img/p.png" alt="Logo" class="mb-4">
+                <img src="../img/p.png" alt="Logo" class="mb-4 logo">
                 <h2>Welcome to Playtech</h2>
                 <p>Sign in to continue access</p>
                 <p class="mt-5 small">www.playtech.com</p>
