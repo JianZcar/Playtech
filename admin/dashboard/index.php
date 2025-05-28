@@ -133,10 +133,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['fetch']) && $_GET['fetc
     foreach ($products as $product) {
         $data[] = [
             'id' => $product['id'],
-            'name' => htmlspecialchars($product['name']),
-            'description' => htmlspecialchars($product['description']),
-            'price' => number_format($product['price'], 2),
-            'category' => htmlspecialchars($product['category']),
+            'name' => $product['name'],
+            'description' => $product['description'],
+            'price' => $product['price'], 2,
+            'category' => $product['category'],
             'image' => !empty($product['image']) ? base64_encode($product['image']) : '',
         ];
     }
@@ -251,7 +251,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minimalist Admin Dashboard</title>
+    <title>Admin Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
@@ -888,11 +888,6 @@ $(function(){
             category_id: form.category_id.value,
             stock: form.stock.value
         };
-        
-        // Add stock adjustment if specified
-        if (form.stock_adjustment.value) {
-            postData.stock_adjustment = form.stock_adjustment.value;
-        }
         
         // Handle image if changed
         var file = form.image.files[0];
