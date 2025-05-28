@@ -5,8 +5,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-
-// Handle AJAX POSTs
+// Handle AJAX POSTs for forms and GET for products fetch
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
 
@@ -25,7 +24,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $imageData = base64_decode($_POST['image_base64']);
-
                 if ($imageData === false) {
                     throw new Exception('Invalid base64 image');
                 }
@@ -55,7 +53,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// Fetch stats
+// Handle AJAX GET for products fetch (for refreshing product list)
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['fetch']) && $_GET['fetch'] === 'products') {
+    header('Content-Type: application/json');
+
+    $stmt = $conn->query("SELECT p.*, c.name AS category FROM products p LEFT JOIN categories c ON p.category_id = c.id ORDER BY p.date_added DESC");
+    $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Prepare data for JSON (encode images in base64)
+    $data = [];
+    foreach ($products as $product) {
+        $data[] = [
+            'id' => $product['id'],
+            'name' => htmlspecialchars($product['name']),
+            'description' => htmlspecialchars($product['description']),
+            'price' => number_format($product['price'], 2),
+            'category' => htmlspecialchars($product['category']),
+            'image' => !empty($product['image']) ? base64_encode($product['image']) : '',
+        ];
+    }
+    echo json_encode(['status' => 'success', 'products' => $data]);
+    exit;
+}
+
+// Fetch stats for dashboard counters
 $stats = [];
 foreach (['users', 'products', 'orders', 'categories'] as $table) {
     $stmt = $conn->query("SELECT COUNT(*) AS count FROM $table");
@@ -63,11 +84,7 @@ foreach (['users', 'products', 'orders', 'categories'] as $table) {
     $stats[$table] = $row['count'];
 }
 
-// Fetch products
-$stmt = $conn->query("SELECT p.*, c.name AS category FROM products p LEFT JOIN categories c ON p.category_id = c.id");
-$products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Fetch categories
+// Fetch categories (for product add modal)
 $stmt = $conn->query("SELECT * FROM categories");
 $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
@@ -91,46 +108,42 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
         border: none;
         border-radius: 10px;
         box-shadow: 0 0 20px rgba(0,0,0,0.4);
+        transition: box-shadow 0.3s ease;
     }
     .card-header, .card-body {
         background-color: #2c2c2c;
     }
     .card:hover > .product-img {
-      transform: scale(1.05);  /* Slight zoom on hover */
-      box-shadow: 0 4px 10px rgba(13, 202, 240, 0.6); /* subtle blue glow */
+      transform: scale(1.05);
+      box-shadow: 0 4px 10px rgba(13, 202, 240, 0.6);
     }
     .card-body {
       display: flex;
       flex-direction: column;
-      justify-content: space-between; /* Spread content vertically */
-      height: 160px;                   /* Fix the height to use space */
+      justify-content: space-between;
+      height: 160px;
     }
-
     .card-body h6 {
       margin-bottom: 5px;
       font-weight: 600;
       color: #0dcaf0;
     }
-
     .card-body small {
       color: #8ab8c9;
     }
-
     .card-body span {
       font-weight: bold;
       font-size: 1.1rem;
       color: #3cd070;
     }
-
     .card-body p {
-      flex-grow: 1;       /* Make description take remaining space */
+      flex-grow: 1;
       font-size: 0.85rem;
       color: #b0b0b0;
       margin-top: 10px;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-
     .form-control, .btn {
         border-radius: 30px;
     }
@@ -162,13 +175,11 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
         color: #ccc;
     }
     .product-img {
-      height: 180px;            /* Bigger height for emphasis */
+      height: 180px;
       object-fit: cover;
       border-radius: 10px;
-   
       transition: transform 0.3s ease;
     }
-
     /* Modal styles override for dark theme */
     .modal-content {
       background-color: #2c2c2c;
@@ -184,6 +195,14 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
       opacity: 1;
       font-size: 1.5rem;
     }
+    /* Loader spinner */
+    .loader {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px 0;
+      color: #0dcaf0;
+    }
   </style>
 </head>
 <body>
@@ -195,25 +214,14 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="col-md-3 stat-box"><h4><?= $stats['categories'] ?></h4><p>Categories</p></div>
     </div>
 
-    <!-- Products Table -->
+    <!-- Products Table Container -->
     <div class="card mb-4">
         <div class="card-header"><h5 class="mb-0">Products</h5></div>
-        <div>
-            <div class="row">
-                <?php foreach ($products as $product): ?>
-                    <div class="col-md-3 mb-4">
-                        <div class="card text-center">
-                            <img src="data:image/jpeg;base64,<?= base64_encode($product['image']) ?>" class="card-img-top product-img" alt="Product Image"/>
-                            <div class="card-body">
-                                <h6><?= htmlspecialchars($product['name']) ?></h6>
-                                <small><?= htmlspecialchars($product['category']) ?></small><br/>
-                                <span>₱<?= number_format($product['price'], 2) ?></span>
-                                <p><?= htmlspecialchars($product['description']) ?></p>
-                            </div>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
+        <div id="productsContainer">
+          <!-- Loader initially -->
+          <div class="loader">
+            <div class="spinner-border text-info" role="status"><span class="sr-only">Loading...</span></div>
+          </div>
         </div>
     </div>
 
@@ -241,7 +249,10 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
           </div>
           <div class="modal-footer">
-            <button class="btn btn-primary" type="submit">Add</button>
+            <button id="categorySubmitBtn" class="btn btn-primary" type="submit">Add</button>
+            <div id="categoryLoading" class="spinner-border text-info" role="status" style="display:none; width: 1.5rem; height: 1.5rem;">
+              <span class="sr-only">Loading...</span>
+            </div>
           </div>
         </form>
       </div>
@@ -267,10 +278,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
             <div class="form-row mb-2">
               <div class="col">
-                <input type="number" step="1" min="1" name="price" class="form-control" placeholder="Price" required>
-              </div>
-              <div class="col">
-                <input type="number" step="1" min="1" name="stock" class="form-control" placeholder="Stock" required>
+                <input type="number" name="price" class="form-control" placeholder="Price" step="0.01" min="0" required>
               </div>
               <div class="col">
                 <select name="category_id" class="form-control" required>
@@ -280,73 +288,143 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
                   <?php endforeach; ?>
                 </select>
               </div>
+              <div class="col">
+                <input type="number" name="stock" class="form-control" placeholder="Stock" min="0" required>
+              </div>
             </div>
             <div class="form-group">
-              <input type="file" name="image" class="form-control-file" accept="image/*" required>
+              <input id="imageInput" type="file" accept="image/*" class="form-control-file" required>
             </div>
           </div>
           <div class="modal-footer">
-            <button class="btn btn-primary" type="submit">Add</button>
+            <button id="productSubmitBtn" class="btn btn-primary" type="submit">Add Product</button>
+            <div id="productLoading" class="spinner-border text-info" role="status" style="display:none; width: 1.5rem; height: 1.5rem;">
+              <span class="sr-only">Loading...</span>
+            </div>
           </div>
         </form>
       </div>
     </div>
+
 </div>
 
 <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
 <script>
-$(function(){
-    // Add Category form submit
-    $("#categoryForm").submit(function(e){
-        e.preventDefault();
-        var formData = $(this).serialize();
-        $.post('', formData, function(data){
-            if(data.status === 'success'){
-                alert(data.message);
-                location.reload();
+$(document).ready(function() {
+    const productsContainer = $('#productsContainer');
+
+    // Function to create product cards HTML from product array
+    function renderProducts(products) {
+        if (products.length === 0) {
+            return `<p class="text-center text-muted">No products found.</p>`;
+        }
+        return products.map(p => `
+            <div class="card mb-3">
+                <div class="card-body d-flex">
+                    <img src="data:image/jpeg;base64,${p.image}" alt="${p.name}" class="product-img mr-3" style="width: 180px; height: 180px;">
+                    <div class="flex-grow-1">
+                        <h6>${p.name}</h6>
+                        <small>${p.category}</small>
+                        <p>${p.description}</p>
+                        <span>$${p.price}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Fetch products and update container
+    function fetchProducts() {
+        productsContainer.html(`
+          <div class="loader">
+            <div class="spinner-border text-info" role="status"><span class="sr-only">Loading...</span></div>
+          </div>
+        `);
+        $.get('<?= $_SERVER['PHP_SELF'] ?>?fetch=products', function(res) {
+            if (res.status === 'success') {
+                productsContainer.html(renderProducts(res.products));
             } else {
-                alert("Error: " + data.message);
+                productsContainer.html('<p class="text-danger text-center">Failed to load products.</p>');
             }
-        }, 'json');
+        }, 'json').fail(() => {
+            productsContainer.html('<p class="text-danger text-center">Failed to load products (network error).</p>');
+        });
+    }
+
+    // Initial fetch
+    fetchProducts();
+
+    // Refresh every 10 seconds
+    setInterval(fetchProducts, 10000);
+
+    // Add Category form submission via AJAX
+    $('#categoryForm').submit(function(e) {
+        e.preventDefault();
+        const form = $(this);
+        $('#categorySubmitBtn').hide();
+        $('#categoryLoading').show();
+
+        $.post('<?= $_SERVER['PHP_SELF'] ?>', form.serialize(), function(res) {
+            if (res.status === 'success') {
+                form[0].reset();
+                $('#addCategoryModal').modal('hide');
+            } else {
+                alert('Error: ' + res.message);
+            }
+        }, 'json').fail(() => alert('Network error.')).always(() => {
+            $('#categoryLoading').hide();
+            $('#categorySubmitBtn').show();
+        });
     });
 
-    // Add Product form submit with image as base64
-    $("#productForm").submit(function(e){
+    // Add Product form submission via AJAX with base64 image
+    $('#productForm').submit(function(e) {
         e.preventDefault();
-
-        var form = this;
-        var file = form.image.files[0];
+        const form = $(this);
+        const fileInput = document.getElementById('imageInput');
+        const file = fileInput.files[0];
         if (!file) {
-            alert("Please select an image.");
+            alert('Please select an image.');
             return;
         }
 
-        var reader = new FileReader();
-        reader.onload = function(evt) {
-            var base64 = evt.target.result.split(',')[1]; // remove "data:image/xxx;base64,"
-            var postData = {
-                action: 'add_product',
-                name: form.name.value,
-                description: form.description.value,
-                price: form.price.value,
-                stock: form.stock.value,
-                category_id: form.category_id.value,
-                image_base64: base64,
-                image_type: file.type
-            };
+        $('#productSubmitBtn').hide();
+        $('#productLoading').show();
 
-            $.post('', postData, function(data){
-                if(data.status === 'success'){
-                    alert(data.message);
-                    location.reload();
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            // event.target.result is dataURL: "data:image/png;base64,..."
+            const base64Data = event.target.result.split(',')[1];
+            const imageType = file.type;
+
+            const data = form.serializeArray();
+            data.push({name: 'image_base64', value: base64Data});
+            data.push({name: 'image_type', value: imageType});
+
+            $.post('<?= $_SERVER['PHP_SELF'] ?>', $.param(data), function(res) {
+                if (res.status === 'success') {
+                    form[0].reset();
+                    $('#addProductModal').modal('hide');
+                    fetchProducts(); // Refresh products immediately
                 } else {
-                    alert("Error: " + data.message);
+                    alert('Error: ' + res.message);
                 }
-            }, 'json');
+            }, 'json').fail(() => alert('Network error.')).always(() => {
+                $('#productLoading').hide();
+                $('#productSubmitBtn').show();
+            });
         };
         reader.readAsDataURL(file);
+    });
+
+    // Clear forms & hide loader when modal closed
+    $('#addCategoryModal, #addProductModal').on('hidden.bs.modal', function() {
+        $(this).find('form')[0].reset();
+        $('#categoryLoading, #productLoading').hide();
+        $('#categorySubmitBtn, #productSubmitBtn').show();
     });
 });
 </script>
