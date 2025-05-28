@@ -76,7 +76,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin Dashboard</title>
   <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet"/>
   <style>
@@ -129,6 +129,21 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
         height: 100px;
         object-fit: cover;
     }
+    /* Modal styles override for dark theme */
+    .modal-content {
+      background-color: #2c2c2c;
+      color: #f0f0f0;
+      border-radius: 15px;
+      border: none;
+    }
+    .modal-header {
+      border-bottom: none;
+    }
+    .close {
+      color: #f0f0f0;
+      opacity: 1;
+      font-size: 1.5rem;
+    }
   </style>
 </head>
 <body>
@@ -162,104 +177,137 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
-    <!-- Add Category -->
-    <div class="card mb-4">
-        <div class="card-header"><h5 class="mb-0">Add Category</h5></div>
-        <div class="card-body">
-            <form id="categoryForm">
-                <input type="hidden" name="action" value="add_category">
-                <div class="form-row">
-                    <div class="col">
-                        <input type="text" name="name" class="form-control" placeholder="Category Name" required>
-                    </div>
-                    <div class="col">
-                        <input type="text" name="description" class="form-control" placeholder="Description">
-                    </div>
-                    <div class="col-auto">
-                        <button class="btn btn-primary" type="submit">Add</button>
-                    </div>
-                </div>
-            </form>
-        </div>
+    <!-- Buttons to Open Modals -->
+    <div class="mb-4 text-right">
+      <button class="btn btn-primary mr-2" data-toggle="modal" data-target="#addCategoryModal">Add Category</button>
+      <button class="btn btn-primary" data-toggle="modal" data-target="#addProductModal">Add Product</button>
     </div>
 
-    <!-- Add Product -->
-    <div class="card mb-4">
-        <div class="card-header"><h5 class="mb-0">Add Product</h5></div>
-        <div class="card-body">
-            <form id="productForm" enctype="multipart/form-data">
-                <input type="hidden" name="action" value="add_product">
-                <div class="form-row mb-2">
-                    <div class="col"><input type="text" name="name" class="form-control" placeholder="Product Name" required></div>
-                    <div class="col"><input type="text" name="description" class="form-control" placeholder="Description"></div>
-                </div>
-                <div class="form-row mb-2">
-                    <div class="col"><input type="number" step="0.01" name="price" class="form-control" placeholder="Price" required></div>
-                    <div class="col"><input type="number" name="stock" class="form-control" placeholder="Stock" required></div>
-                    <div class="col">
-                        <select name="category_id" class="form-control" required>
-                            <option value="">Select Category</option>
-                            <?php foreach ($categories as $cat): ?>
-                                <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col"><input type="file" name="image" class="form-control-file" required></div>
-                    <div class="col-auto">
-                        <button class="btn btn-primary" type="submit">Add</button>
-                    </div>
-                </div>
-            </form>
-        </div>
+    <!-- Add Category Modal -->
+    <div class="modal fade" id="addCategoryModal" tabindex="-1" role="dialog" aria-labelledby="addCategoryModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <form id="categoryForm" class="modal-content">
+          <input type="hidden" name="action" value="add_category">
+          <div class="modal-header">
+            <h5 class="modal-title" id="addCategoryModalLabel">Add Category</h5>
+            <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <input type="text" name="name" class="form-control" placeholder="Category Name" required>
+            </div>
+            <div class="form-group">
+              <input type="text" name="description" class="form-control" placeholder="Description">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-primary" type="submit">Add</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Add Product Modal -->
+    <div class="modal fade" id="addProductModal" tabindex="-1" role="dialog" aria-labelledby="addProductModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <form id="productForm" enctype="multipart/form-data" class="modal-content">
+          <input type="hidden" name="action" value="add_product">
+          <div class="modal-header">
+            <h5 class="modal-title" id="addProductModalLabel">Add Product</h5>
+            <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-row mb-2">
+              <div class="col">
+                <input type="text" name="name" class="form-control" placeholder="Product Name" required>
+              </div>
+              <div class="col">
+                <input type="text" name="description" class="form-control" placeholder="Description">
+              </div>
+            </div>
+            <div class="form-row mb-2">
+              <div class="col">
+                <input type="number" step="1" min="1" name="price" class="form-control" placeholder="Price" required>
+              </div>
+              <div class="col">
+                <input type="number" step="1" min="1" name="stock" class="form-control" placeholder="Stock" required>
+              </div>
+              <div class="col">
+                <select name="category_id" class="form-control" required>
+                  <option value="">Select Category</option>
+                  <?php foreach ($categories as $cat): ?>
+                    <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <input type="file" name="image" class="form-control-file" accept="image/*" required>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-primary" type="submit">Add</button>
+          </div>
+        </form>
+      </div>
     </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
-$('#categoryForm').submit(function(e) {
-    e.preventDefault();
-    $.post('', $(this).serialize(), function(res) {
-        alert(res.message);
-        if(res.status === 'success') location.reload();
-    }, 'json');
-});
-
-$("#productForm").on("submit", function(e) {
-  e.preventDefault();
-
-  const formData = new FormData(this);
-  const file = $("input[name='image']")[0].files[0];
-
-  if (!file) return alert("Select an image!");
-
-  const reader = new FileReader();
-  reader.onload = function() {
-    const base64 = reader.result.split(',')[1];
-    const imageType = file.type;
-
-    formData.append("action", "add_product");
-    formData.append("image_base64", base64);
-    formData.append("image_type", imageType);
-
-    // Remove original file input so it won't conflict
-    formData.delete("image");
-
-    $.ajax({
-      type: "POST",
-      url: "./",
-      data: formData,
-      processData: false,
-      contentType: false,
-      success: function(response) {
-        alert(response.message);
-      },
-      error: function() {
-        alert("Upload failed.");
-      }
+$(function(){
+    // Add Category form submit
+    $("#categoryForm").submit(function(e){
+        e.preventDefault();
+        var formData = $(this).serialize();
+        $.post('', formData, function(data){
+            if(data.status === 'success'){
+                alert(data.message);
+                location.reload();
+            } else {
+                alert("Error: " + data.message);
+            }
+        }, 'json');
     });
-  };
 
-  reader.readAsDataURL(file);
+    // Add Product form submit with image as base64
+    $("#productForm").submit(function(e){
+        e.preventDefault();
+
+        var form = this;
+        var file = form.image.files[0];
+        if (!file) {
+            alert("Please select an image.");
+            return;
+        }
+
+        var reader = new FileReader();
+        reader.onload = function(evt) {
+            var base64 = evt.target.result.split(',')[1]; // remove "data:image/xxx;base64,"
+            var postData = {
+                action: 'add_product',
+                name: form.name.value,
+                description: form.description.value,
+                price: form.price.value,
+                stock: form.stock.value,
+                category_id: form.category_id.value,
+                image_base64: base64,
+                image_type: file.type
+            };
+
+            $.post('', postData, function(data){
+                if(data.status === 'success'){
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert("Error: " + data.message);
+                }
+            }, 'json');
+        };
+        reader.readAsDataURL(file);
+    });
 });
 </script>
 </body>
