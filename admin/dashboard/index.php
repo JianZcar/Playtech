@@ -43,6 +43,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 echo json_encode(['status' => 'success', 'message' => 'Product added']);
                 exit;
             }
+            if ($_POST['action'] === 'edit_product') {
+        try {
+            $productId = $_POST['product_id'];
+            
+            // First validate the product exists
+            $stmt = $conn->prepare("SELECT id FROM products WHERE id = ?");
+            $stmt->execute([$productId]);
+            if (!$stmt->fetch()) {
+                throw new Exception('Product not found');
+            }
+            
+            // Handle image if provided
+            $imageUpdate = '';
+            $imageParams = [];
+            if (isset($_POST['image_base64'])) {
+                $imageData = base64_decode($_POST['image_base64']);
+                if ($imageData === false) {
+                    throw new Exception('Invalid base64 image');
+                }
+                $imageUpdate = ', image = ?';
+                $imageParams = [$imageData];
+            }
+            
+            // Handle stock adjustment if provided
+            $stockAdjustment = isset($_POST['stock_adjustment']) ? (int)$_POST['stock_adjustment'] : 0;
+            $stockUpdate = $stockAdjustment !== 0 ? ', stock = stock + ?' : '';
+            $stockParams = $stockAdjustment !== 0 ? [$stockAdjustment] : [];
+            
+            // Update product
+            $stmt = $conn->prepare("
+                UPDATE products 
+                SET name = ?, description = ?, price = ?, category_id = ? $imageUpdate $stockUpdate
+                WHERE id = ?
+            ");
+            
+            $params = array_merge(
+                [$_POST['name'], $_POST['description'], $_POST['price'], $_POST['category_id']],
+                $imageParams,
+                $stockParams,
+                [$productId]
+            );
+            
+            $stmt->execute($params);
+            
+            // Log inventory adjustment if any
+            if ($stockAdjustment !== 0) {
+                $action = $stockAdjustment > 0 ? 0 : 1; // 0 = add, 1 = remove
+                $stmt = $conn->prepare("
+                    INSERT INTO inventory_logs 
+                    (product_id, action, quantity, admin_id, date_logged) 
+                    VALUES (?, ?, ?, ?, NOW())
+                ");
+                $stmt->execute([
+                    $productId,
+                    $action,
+                    abs($stockAdjustment),
+                    $_SESSION['admin_id'] ?? 1 // Replace with your admin session
+                ]);
+            }
+            
+            echo json_encode(['status' => 'success', 'message' => 'Product updated']);
+            exit;
+        } catch (Exception $e) {
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            exit;
+        }
+    }
 
             throw new Exception('Invalid action');
         } catch (Exception $e) {
@@ -137,7 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
                 'price' => number_format($product['price'], 2),
                 'category' => htmlspecialchars($product['category_name']),
                 'stock' => $product['stock'],
-                'image' => base64_encode($product['image'])
+                'image' => !empty($product['image']) ? base64_encode($product['image']) : '',
             ],
             'stats' => [
                 'total_sold' => $salesData['total_sold'] ?: 0,
@@ -406,7 +473,27 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
             gap: 24px;
             padding: 20px;
         }
-        
+
+        /* Edit modal specific styles */
+        #currentImageContainer {
+            border: 1px dashed rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.03);
+            text-align: center;
+        }
+
+        #currentProductImage {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        .stock-adjustment-info {
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-top: 5px;
+        }
+
         @media (max-width: 768px) {
             body {
                 padding: 15px;
@@ -525,6 +612,69 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </div>
     </div>
+    <!-- Edit Product Modal -->
+    <div class="modal fade" id="editProductModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Product</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editProductForm" class="modal-content">
+                    <div class="modal-body">
+                        <input type="hidden" name="product_id" id="editProductId">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Product Name</label>
+                                <input type="text" name="name" id="editProductName" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Category</label>
+                                <select name="category_id" id="editProductCategory" class="form-select" required>
+                                <?php foreach ($categories as $cat): ?>
+                                    <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?></option>
+                                <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" id="editProductDescription" class="form-control" rows="2"></textarea>
+                        </div>
+                        
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Price (₱)</label>
+                                <input type="number" step="0.01" min="0" name="price" id="editProductPrice" class="form-control" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Stock</label>
+                                <input type="number" min="0" step="1" name="stock" id="editProductStock" class="form-control" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Adjust Stock (optional)</label>
+                                <input type="number" name="stock_adjustment" id="editProductStockAdjustment" class="form-control" placeholder="+/- quantity">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Product Image</label>
+                            <input type="file" name="image" class="form-control" accept="image/*">
+                            <small class="text-muted">Leave empty to keep current image</small>
+                            <div class="mt-2" id="currentImageContainer">
+                                <img src="" id="currentProductImage" style="max-height: 150px; display: none;" class="img-thumbnail">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <!-- Add Product Modal -->
     <div class="modal fade" id="addProductModal" tabindex="-1">
@@ -624,7 +774,7 @@ $(function(){
                         </div>
                         <div class="col-md-8">
                             <h3>${p.name}</h3>
-                            <p class="text-muted">${p.category}</p>
+                            <p>${p.category}</p>
                             <p>${p.description}</p>
                             <div class="d-flex justify-content-between">
                                 <div>
@@ -692,15 +842,85 @@ $(function(){
         `);
         currentProductId = null;
     });
-
-    // Edit button handler
     $('#editProductBtn').click(function() {
         if (currentProductId) {
-            alert('Edit product ID: ' + currentProductId);
-            // Here you would open your edit modal for the product
-            // For example: openEditProductModal(currentProductId);
+            // First fetch the product details to populate the form
+            $.get(`<?= $_SERVER['PHP_SELF'] ?>?action=details&product_id=${currentProductId}`, function(data) {
+                if (data.status === 'success') {
+                    const p = data.product;
+                    
+                    // Populate the edit form
+                    $('#editProductId').val(p.id);
+                    $('#editProductName').val(p.name);
+                    $('#editProductDescription').val(p.description);
+                    $('#editProductPrice').val(p.price.replace(/[^0-9.]/g, ''));
+                    $('#editProductStock').val(p.stock);
+                    $('#editProductCategory').val(p.category_id);
+                    
+                    // Show current image
+                    if (p.image) {
+                        $('#currentProductImage').attr('src', `data:image/jpeg;base64,${p.image}`).show();
+                    }
+                    
+                    // Close details modal and open edit modal
+                    $('#productDetailsModal').modal('hide');
+                    $('#editProductModal').modal('show');
+                } else {
+                    alert('Failed to load product details: ' + data.message);
+                }
+            });
         }
     });
+
+    $("#editProductForm").submit(function(e){
+        e.preventDefault();
+
+        var form = this;
+        var productId = form.product_id.value;
+        
+        // Prepare base data
+        var postData = {
+            action: 'edit_product',
+            product_id: productId,
+            name: form.name.value,
+            description: form.description.value,
+            price: form.price.value,
+            category_id: form.category_id.value,
+            stock: form.stock.value
+        };
+        
+        // Add stock adjustment if specified
+        if (form.stock_adjustment.value) {
+            postData.stock_adjustment = form.stock_adjustment.value;
+        }
+        
+        // Handle image if changed
+        var file = form.image.files[0];
+        if (file) {
+            var reader = new FileReader();
+            reader.onload = function(evt) {
+                var base64 = evt.target.result.split(',')[1];
+                postData.image_base64 = base64;
+                postData.image_type = file.type;
+                submitEditForm(postData);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            submitEditForm(postData);
+        }
+    });
+
+    function submitEditForm(data) {
+        $.post('', data, function(response){
+            if(response.status === 'success'){
+                alert(response.message);
+                $('#editProductModal').modal('hide');
+                fetchProducts(); // Refresh the products list
+            } else {
+                alert("Error: " + response.message);
+            }
+        }, 'json');
+    }
 
     const productsContainer = $('#productsContainer');
 
