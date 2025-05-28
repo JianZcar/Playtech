@@ -109,12 +109,12 @@
         <h3>Welcome, <strong><?= htmlspecialchars($userProfile['fname']) ?></strong>!</h3>
       </div>
       <div class="col-md-3">
-        <div class="stat-box">
-          <i class="bi bi-person-circle fs-2 text-info"></i>
-          <h3><?= htmlspecialchars($userProfile['fname'] . ' ' . $userProfile['lname']) ?></h3>
-          <p>User Profile</p>
-        </div>
-      </div>
+    <div class="stat-box" data-bs-toggle="modal" data-bs-target="#editProfileModal" style="cursor: pointer;">
+      <i class="bi bi-person-circle fs-2 text-info"></i>
+      <h3><?= htmlspecialchars($userProfile['fname'] . ' ' . $userProfile['lname']) ?></h3>
+      <p>User Profile</p>
+    </div>
+  </div>
       <div class="col-md-3">
         <a href="cart.php" class="text-decoration-none">
         <div class="stat-box">
