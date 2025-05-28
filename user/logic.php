@@ -14,9 +14,40 @@ if (!isset($_SESSION['user_id'])) {
 $userId = $_SESSION['user_id'];
 $email = $_SESSION['email'] ?? '';
 
+// Handle Profile Update
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
+    $fname = $_POST['edit_fname'];
+    $mname = $_POST['edit_mname'] ?? '';
+    $lname = $_POST['edit_lname'];
+    $mobile = $_POST['edit_mobile'];
+    $password = $_POST['edit_password'];
+
+    // Prepare update statement
+    $updateQuery = "UPDATE users SET fname = ?, mname = ?, lname = ?, mobile = ?";
+    $params = [$fname, $mname, $lname, $mobile];
+
+    if (!empty($password)) {
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+        $updateQuery .= ", password = ?";
+        $params[] = $hashedPassword;
+    }
+
+    $updateQuery .= " WHERE id = ?";
+    $params[] = $userId;
+
+    try {
+        $stmt = $conn->prepare($updateQuery);
+        $stmt->execute($params);
+        header("Location: index.php");
+        exit();
+    } catch (PDOException $e) {
+        die("Profile update failed: " . $e->getMessage());
+    }
+}
+
 try {
     // Fetch user profile
-    $stmt = $conn->prepare("SELECT fname, lname, email, mobile FROM users WHERE id = ?");
+    $stmt = $conn->prepare("SELECT fname, mname, lname, email, mobile FROM users WHERE id = ?");
     $stmt->execute([$userId]);
     $userProfile = $stmt->fetch(PDO::FETCH_ASSOC);
 
