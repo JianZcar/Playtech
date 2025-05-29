@@ -15,7 +15,7 @@ $order_id = $_GET['order_id'] ?? null;
         <?php if ($order_id): ?>
             <p>Order ID: <strong><?= htmlspecialchars($order_id) ?></strong></p>
         <?php endif; ?>
-        <a href="index.php" class="btn btn-outline-info mt-3">Go to Dashboard</a>
+        <a href="../dashboard" class="btn btn-outline-info mt-3">Go to Dashboard</a>
     </div>
 </body>
 </html>

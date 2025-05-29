@@ -4,9 +4,11 @@ if (!isset($_SESSION['is_admin'])) {
     header("Location: ../../dashboard");
     exit;
 }
+
 include "../../connection/connect.php";
 
-// Handle create/update form submission
+$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id = $_POST['id'] ?? null;
     $fname = $_POST['fname'] ?? '';
@@ -16,15 +18,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $mobile = $_POST['mobile'] ?? '';
     $password = $_POST['password'] ?? '';
 
-    // Validate required fields
     if (!$fname || !$lname || !$email || !$mobile) {
-        echo json_encode(['status' => 'error', 'message' => 'Please fill in all required fields']);
+        header("Location: users_crud.php?msg=" . urlencode("Please fill in all required fields"));
         exit;
     }
 
     try {
         if ($id) {
-            // Update user (if password is empty, don't update it)
             if ($password) {
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
                 $sql = "UPDATE users SET fname=:fname, mname=:mname, lname=:lname, email=:email, mobile=:mobile, password=:password WHERE id=:id";
@@ -44,15 +44,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $stmt->execute();
-            echo json_encode(['status' => 'success', 'message' => 'User updated successfully']);
+            header("Location: ./?msg=" . urlencode("User updated successfully"));
         } else {
-            // Create user
             if (!$password) {
-                echo json_encode(['status' => 'error', 'message' => 'Password is required for new users']);
+                header("Location: ./msg=" . urlencode("Password is required for new users"));
                 exit;
             }
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
+            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
             $sql = "INSERT INTO users (fname, mname, lname, email, mobile, password) VALUES (:fname, :mname, :lname, :email, :mobile, :password)";
             $stmt = $conn->prepare($sql);
             $stmt->bindParam(':fname', $fname);
@@ -61,98 +60,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bindParam(':email', $email);
             $stmt->bindParam(':mobile', $mobile);
             $stmt->bindParam(':password', $hashed_password);
-
             $stmt->execute();
-            echo json_encode(['status' => 'success', 'message' => 'User created successfully']);
+            header("Location: users_crud.php?msg=" . urlencode("User created successfully"));
         }
     } catch (PDOException $e) {
-        echo json_encode(['status' => 'error', 'message' => 'Database error: '.$e->getMessage()]);
+        header("Location: users_crud.php?msg=" . urlencode("Database error: " . $e->getMessage()));
     }
     exit;
 }
 
-// Handle delete request
 if (isset($_GET['delete_id'])) {
     $id = (int)$_GET['delete_id'];
     try {
         $stmt = $conn->prepare("DELETE FROM users WHERE id = :id");
         $stmt->bindParam(':id', $id);
         $stmt->execute();
-        header("Location: users_crud.php?msg=User deleted successfully");
-        exit;
+        header("Location: ./?msg=" . urlencode("User deleted successfully"));
     } catch (PDOException $e) {
-        header("Location: users_crud.php?msg=Error deleting user: " . urlencode($e->getMessage()));
-        exit;
+            if ($e->getCode() == '23000') { // Integrity constraint violation
+        header("Location: ./?msg=" . urlencode("Cannot delete user: they are referenced in other records"));
+    } else {
+        header("Location: ./?msg=" . urlencode("Error deleting user: " . $e->getMessage()));
     }
+    }
+    exit;
 }
 
-// Fetch all users for display
 $stmt = $conn->prepare("SELECT id, fname, mname, lname, email, mobile FROM users ORDER BY id DESC");
 $stmt->execute();
 $users = $stmt->fetchAll();
-
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Users CRUD</title>
+<meta charset="UTF-8">
+<title>Users CRUD</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-  <style>
-    body {
-      background: #1e1e1e;
-      color: #f0f0f0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      padding: 20px;
-    }
-    table {
-      background-color: #555;
-    }
-    .modal-content {
-      background-color: #2c2c2c;
-      color: #f0f0f0;
-    }
-
-    .form-control {
-      background-color: #3a3a3a;
-      color: #f0f0f0;
-      border: 1px solid #555;
-    }
-    .form-control::placeholder {
-      color: #aaa;
-    }
-    .btn-primary {
-      background: linear-gradient(to right, #0dcaf0, #198754);
-      border: none;
-    }
-    .btn-primary:hover {
-      background: linear-gradient(to right, #198754, #0dcaf0);
-    }
-  </style>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </head>
-<body>
 <?php include "../includes/header.php"; ?>
-<div class="container">
-  <h2 class="mb-4 text-center">Users Management</h2>
+<body class="bg-dark text-light">
+<div class="container mt-5">
+  <h2 class="text-center">Users Management</h2>
   <?php if (isset($_GET['msg'])): ?>
-    <div class="alert alert-info"><?= htmlspecialchars($_GET['msg']) ?></div>
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+      <?= htmlspecialchars($_GET['msg']) ?>
+      <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span>&times;</span></button>
+    </div>
   <?php endif; ?>
-  
-  <button class="btn btn-primary mb-3" data-toggle="modal" data-target="#userModal" onclick="openCreateModal()">Add New User</button>
-
-  <table class="table table-bordered table-hover text-light">
+  <button class="btn btn-success mb-3" data-toggle="modal" data-target="#userModal" onclick="openCreateModal()">Add New User</button>
+  <table class="table table-dark table-bordered">
     <thead>
       <tr>
-        <th>ID</th>
-        <th>First Name</th>
-        <th>Middle Name</th>
-        <th>Last Name</th>
-        <th>Email</th>
-        <th>Mobile</th>
-        <th>Actions</th>
+        <th>ID</th><th>First</th><th>Middle</th><th>Last</th><th>Email</th><th>Mobile</th><th>Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -165,57 +127,37 @@ $users = $stmt->fetchAll();
           <td><?= htmlspecialchars($user['email']) ?></td>
           <td><?= htmlspecialchars($user['mobile']) ?></td>
           <td>
-            <button class="btn btn-sm btn-info" onclick="openEditModal(<?= json_encode($user) ?>)">Edit</button>
-            <a href="?delete_id=<?= $user['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Delete this user?');">Delete</a>
+            <button class="btn btn-info btn-sm" onclick='openEditModal(<?= json_encode($user) ?>)'>Edit</button>
+            <a href="?delete_id=<?= $user['id'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Delete this user?');">Delete</a>
           </td>
         </tr>
       <?php endforeach; ?>
-      <?php if (count($users) === 0): ?>
-        <tr><td colspan="7" class="text-center">No users found.</td></tr>
-      <?php endif; ?>
     </tbody>
   </table>
 </div>
 
 <!-- Modal -->
-<div class="modal fade" id="userModal" tabindex="-1" aria-hidden="true" aria-labelledby="userModalLabel">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <form id="userForm" method="POST" onsubmit="return submitForm(event)">
+<div class="modal fade" id="userModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content bg-secondary text-light">
+      <form method="POST" id="userForm">
         <div class="modal-header">
-          <h5 class="modal-title" id="userModalLabel">Add User</h5>
-          <button type="button" class="close text-light" data-dismiss="modal" aria-label="Close">&times;</button>
+          <h5 class="modal-title">User Form</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span>&times;</span>
+          </button>
         </div>
         <div class="modal-body">
-          <input type="hidden" name="id" id="userId" />
-          <div class="form-group">
-            <label for="fname">First Name *</label>
-            <input type="text" class="form-control" id="fname" name="fname" required />
-          </div>
-          <div class="form-group">
-            <label for="mname">Middle Name</label>
-            <input type="text" class="form-control" id="mname" name="mname" />
-          </div>
-          <div class="form-group">
-            <label for="lname">Last Name *</label>
-            <input type="text" class="form-control" id="lname" name="lname" required />
-          </div>
-          <div class="form-group">
-            <label for="email">Email *</label>
-            <input type="email" class="form-control" id="email" name="email" required />
-          </div>
-          <div class="form-group">
-            <label for="mobile">Mobile *</label>
-            <input type="text" class="form-control" id="mobile" name="mobile" required />
-          </div>
-          <div class="form-group">
-            <label for="password">Password <small><em>(Leave empty to keep current password)</em></small></label>
-            <input type="password" class="form-control" id="password" name="password" />
-          </div>
-          <div id="formMessage" class="text-danger"></div>
+          <input type="hidden" name="id" id="userId">
+          <div class="form-group"><label>First Name *</label><input type="text" name="fname" id="fname" class="form-control" required></div>
+          <div class="form-group"><label>Middle Name</label><input type="text" name="mname" id="mname" class="form-control"></div>
+          <div class="form-group"><label>Last Name *</label><input type="text" name="lname" id="lname" class="form-control" required></div>
+          <div class="form-group"><label>Email *</label><input type="email" name="email" id="email" class="form-control" required></div>
+          <div class="form-group"><label>Mobile *</label><input type="text" name="mobile" id="mobile" class="form-control" required></div>
+          <div class="form-group"><label>Password</label><input type="password" name="password" id="password" class="form-control"></div>
         </div>
         <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Save User</button>
+          <button type="submit" class="btn btn-primary">Save</button>
           <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
         </div>
       </form>
@@ -223,59 +165,23 @@ $users = $stmt->fetchAll();
   </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  function openCreateModal() {
-    $('#userModalLabel').text('Add User');
-    $('#userForm')[0].reset();
-    $('#userId').val('');
-    $('#formMessage').text('');
-    $('#userModal').modal('show');
-  }
+function openCreateModal() {
+  document.getElementById('userForm').reset();
+  document.getElementById('userId').value = '';
+  $('#userModal').modal('show');
+}
 
-  function openEditModal(user) {
-    $('#userModalLabel').text('Edit User');
-    $('#userId').val(user.id);
-    $('#fname').val(user.fname);
-    $('#mname').val(user.mname);
-    $('#lname').val(user.lname);
-    $('#email').val(user.email);
-    $('#mobile').val(user.mobile);
-    $('#password').val('');
-    $('#formMessage').text('');
-    $('#userModal').modal('show');
-  }
-
-  function submitForm(e) {
-    e.preventDefault();
-    const formData = $('#userForm').serialize();
-
-    // Basic front-end validation
-    if (!$('#fname').val() || !$('#lname').val() || !$('#email').val() || !$('#mobile').val()) {
-      $('#formMessage').text('Please fill in all required fields.');
-      return false;
-    }
-
-    $.ajax({
-      url: 'users_crud.php',
-      type: 'POST',
-      data: formData,
-      dataType: 'json',
-      success: function(response) {
-        if (response.status === 'success') {
-          location.reload();
-        } else {
-          $('#formMessage').text(response.message || 'Error saving user.');
-        }
-      },
-      error: function() {
-        $('#formMessage').text('An error occurred. Please try again.');
-      }
-    });
-
-    return false;
-  }
+function openEditModal(user) {
+  document.getElementById('userId').value = user.id;
+  document.getElementById('fname').value = user.fname;
+  document.getElementById('mname').value = user.mname;
+  document.getElementById('lname').value = user.lname;
+  document.getElementById('email').value = user.email;
+  document.getElementById('mobile').value = user.mobile;
+  document.getElementById('password').value = '';
+  $('#userModal').modal('show');
+}
 </script>
 </body>
 </html>

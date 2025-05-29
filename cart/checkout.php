@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['pay'])) {
     $clear_stmt = $conn->prepare("DELETE FROM cart WHERE user_id = ?");
     $clear_stmt->execute([$user_id]);
 
-    header("Location: order_success.php?order_id=" . $order_id);
+    header("Location: ../orders/order_success.php?order_id=" . $order_id);
     exit;
 }
 ?>
@@ -179,7 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['pay'])) {
         </div>
 
         <form method="POST" class="text-end mt-4">
-            <a href="cart.php" class="btn btn-outline-light">← Back to Cart</a>
+            <a href="../cart" class="btn btn-outline-light">← Back to Cart</a>
             <button type="submit" name="pay" class="btn btn-success">Pay $<?= number_format($total, 2) ?></button>
         </form>
     <?php endif; ?>
