@@ -149,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $productId,
                     $action,
                     abs($stockAdjustment),
-                    $_SESSION['admin_id'] ?? 1 // Replace with your admin session
+                    $_SESSION['user_id'] ?? 1 // Replace with your admin session
                 ]);
             }
             
