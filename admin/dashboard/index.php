@@ -98,12 +98,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 									$productId = $_POST['product_id'];
 									
 									// First validate the product exists
-									$stmt = $conn->prepare("SELECT id FROM products WHERE id = ?");
+									$stmt = $conn->prepare("SELECT id, stock FROM products WHERE id = ?");
 									$stmt->execute([$productId]);
-									if (!$stmt->fetch()) {
+									$currentProduct = $stmt->fetch();
+									
+									if (!$currentProduct) {
 										  throw new Exception('Product not found');
 									}
-									
+
 									// Handle image if provided
 									$imageUpdate = '';
 									$imageParams = [];
@@ -116,43 +118,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 										  $imageParams = [$imageData];
 									}
 									
-									// Handle stock - we'll update directly if stock is set, otherwise use adjustment
-									$stockUpdate = '';
-									$stockParams = [];
-									$logAdjustment = false;
+									// Calculate stock changes
+									$newStock = (int)$_POST['stock'];
+									$stockAdjustment = (int)$_POST['stock_adjustment'];
+									$currentStock = (int)$currentProduct['stock'];
 									
-									if (isset($_POST['stock'])) {
-										  // Direct stock update (no logging)
-										  $stockUpdate = ', stock = ?';
-										  $stockParams = [$_POST['stock']];
-									} elseif (isset($_POST['stock_adjustment'])) {
-										  // Stock adjustment (with logging)
-										  $stockAdjustment = (int)$_POST['stock_adjustment'];
-										  if ($stockAdjustment !== 0) {
-										      $stockUpdate = ', stock = stock + ?';
-										      $stockParams = [$stockAdjustment];
-										      $logAdjustment = true;
-										  }
+									// Determine if we're doing a direct update or adjustment
+									if ($stockAdjustment !== 0) {
+										  // Using adjustment - calculate new stock and log
+										  $newStock = $currentStock + $stockAdjustment;
+										  $shouldLog = true;
+									} else {
+										  // Direct stock update - no logging unless stock actually changed
+										  $shouldLog = ($newStock != $currentStock);
+										  $stockAdjustment = $newStock - $currentStock;
 									}
 									
 									// Update product
 									$stmt = $conn->prepare("
 										  UPDATE products 
-										  SET name = ?, description = ?, price = ?, category_id = ? $imageUpdate $stockUpdate
+										  SET name = ?, description = ?, price = ?, category_id = ?, stock = ? $imageUpdate
 										  WHERE id = ?
 									");
 									
 									$params = array_merge(
-										  [$_POST['name'], $_POST['description'], $_POST['price'], $_POST['category_id']],
+										  [$_POST['name'], $_POST['description'], $_POST['price'], $_POST['category_id'], $newStock],
 										  $imageParams,
-										  $stockParams,
 										  [$productId]
 									);
 									
 									$stmt->execute($params);
 									
-									// Log inventory adjustment if it was an adjustment
-									if ($logAdjustment) {
+									// Log inventory adjustment if needed
+									if ($shouldLog && $stockAdjustment != 0) {
 										  $action = $stockAdjustment > 0 ? 0 : 1; // 0 = add, 1 = remove
 										  $stmt = $conn->prepare("
 										      INSERT INTO inventory_logs 
@@ -174,7 +172,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 									exit;
 							}
 					}
-
 
             throw new Exception('Invalid action');
         } catch (Exception $e) {
@@ -1005,17 +1002,10 @@ $(function(){
 				    name: form.name.value,
 				    description: form.description.value,
 				    price: form.price.value,
-				    category_id: form.category_id.value
+				    category_id: form.category_id.value,
+				    stock: form.stock.value,  // Always send current stock value
+				    stock_adjustment: form.stock_adjustment.value || 0  // Send adjustment if any
 				};
-				
-				// Handle stock fields
-				if (form.stock.value !== form.stock.defaultValue) {
-				    // Direct stock change (no adjustment)
-				    postData.stock = form.stock.value;
-				} else if (form.stock_adjustment.value) {
-				    // Stock adjustment
-				    postData.stock_adjustment = form.stock_adjustment.value;
-				}
 				
 				// Handle image if changed
 				var file = form.image.files[0];
