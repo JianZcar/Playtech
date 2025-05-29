@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
 
     if (!$fname || !$lname || !$email || !$mobile) {
-        header("Location: users_crud.php?msg=" . urlencode("Please fill in all required fields"));
+        header("Location: ./?msg=" . urlencode("Please fill in all required fields"));
         exit;
     }
 
@@ -61,10 +61,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bindParam(':mobile', $mobile);
             $stmt->bindParam(':password', $hashed_password);
             $stmt->execute();
-            header("Location: users_crud.php?msg=" . urlencode("User created successfully"));
         }
     } catch (PDOException $e) {
-        header("Location: users_crud.php?msg=" . urlencode("Database error: " . $e->getMessage()));
+        header("Location: ./?msg=" . urlencode("Database error: " . $e->getMessage()));
     }
     exit;
 }
