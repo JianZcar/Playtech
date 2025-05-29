@@ -93,73 +93,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            if ($_POST['action'] === 'edit_product') {
-        try {
-            $productId = $_POST['product_id'];
-            
-            // First validate the product exists
-            $stmt = $conn->prepare("SELECT id FROM products WHERE id = ?");
-            $stmt->execute([$productId]);
-            if (!$stmt->fetch()) {
-                throw new Exception('Product not found');
-            }
-            
-            // Handle image if provided
-            $imageUpdate = '';
-            $imageParams = [];
-            if (isset($_POST['image_base64'])) {
-                $imageData = base64_decode($_POST['image_base64']);
-                if ($imageData === false) {
-                    throw new Exception('Invalid base64 image');
-                }
-                $imageUpdate = ', image = ?';
-                $imageParams = [$imageData];
-            }
-            
-            // Handle stock adjustment if provided
-            $stockAdjustment = isset($_POST['stock_adjustment']) ? (int)$_POST['stock_adjustment'] : 0;
-            $stockUpdate = $stockAdjustment !== 0 ? ', stock = stock + ?' : '';
-            $stockParams = $stockAdjustment !== 0 ? [$stockAdjustment] : [];
-            
-            // Update product
-            $stmt = $conn->prepare("
-                UPDATE products 
-                SET name = ?, description = ?, price = ?, category_id = ? $imageUpdate $stockUpdate
-                WHERE id = ?
-            ");
-            
-            $params = array_merge(
-                [$_POST['name'], $_POST['description'], $_POST['price'], $_POST['category_id']],
-                $imageParams,
-                $stockParams,
-                [$productId]
-            );
-            
-            $stmt->execute($params);
-            
-            // Log inventory adjustment if any
-            if ($stockAdjustment !== 0) {
-                $action = $stockAdjustment > 0 ? 0 : 1; // 0 = add, 1 = remove
-                $stmt = $conn->prepare("
-                    INSERT INTO inventory_logs 
-                    (product_id, action, quantity, admin_id, date_logged) 
-                    VALUES (?, ?, ?, ?, NOW())
-                ");
-                $stmt->execute([
-                    $productId,
-                    $action,
-                    abs($stockAdjustment),
-                    $_SESSION['user_id'] ?? 1 // Replace with your admin session
-                ]);
-            }
-            
-            echo json_encode(['status' => 'success', 'message' => 'Product updated']);
-            exit;
-        } catch (Exception $e) {
-            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
-            exit;
-        }
-    }
+					if ($_POST['action'] === 'edit_product') {
+							try {
+									$productId = $_POST['product_id'];
+									
+									// First validate the product exists
+									$stmt = $conn->prepare("SELECT id FROM products WHERE id = ?");
+									$stmt->execute([$productId]);
+									if (!$stmt->fetch()) {
+										  throw new Exception('Product not found');
+									}
+									
+									// Handle image if provided
+									$imageUpdate = '';
+									$imageParams = [];
+									if (isset($_POST['image_base64'])) {
+										  $imageData = base64_decode($_POST['image_base64']);
+										  if ($imageData === false) {
+										      throw new Exception('Invalid base64 image');
+										  }
+										  $imageUpdate = ', image = ?';
+										  $imageParams = [$imageData];
+									}
+									
+									// Handle stock - we'll update directly if stock is set, otherwise use adjustment
+									$stockUpdate = '';
+									$stockParams = [];
+									$logAdjustment = false;
+									
+									if (isset($_POST['stock'])) {
+										  // Direct stock update (no logging)
+										  $stockUpdate = ', stock = ?';
+										  $stockParams = [$_POST['stock']];
+									} elseif (isset($_POST['stock_adjustment'])) {
+										  // Stock adjustment (with logging)
+										  $stockAdjustment = (int)$_POST['stock_adjustment'];
+										  if ($stockAdjustment !== 0) {
+										      $stockUpdate = ', stock = stock + ?';
+										      $stockParams = [$stockAdjustment];
+										      $logAdjustment = true;
+										  }
+									}
+									
+									// Update product
+									$stmt = $conn->prepare("
+										  UPDATE products 
+										  SET name = ?, description = ?, price = ?, category_id = ? $imageUpdate $stockUpdate
+										  WHERE id = ?
+									");
+									
+									$params = array_merge(
+										  [$_POST['name'], $_POST['description'], $_POST['price'], $_POST['category_id']],
+										  $imageParams,
+										  $stockParams,
+										  [$productId]
+									);
+									
+									$stmt->execute($params);
+									
+									// Log inventory adjustment if it was an adjustment
+									if ($logAdjustment) {
+										  $action = $stockAdjustment > 0 ? 0 : 1; // 0 = add, 1 = remove
+										  $stmt = $conn->prepare("
+										      INSERT INTO inventory_logs 
+										      (product_id, action, quantity, admin_id, date_logged) 
+										      VALUES (?, ?, ?, ?, NOW())
+										  ");
+										  $stmt->execute([
+										      $productId,
+										      $action,
+										      abs($stockAdjustment),
+										      $_SESSION['user_id'] ?? 1
+										  ]);
+									}
+									
+									echo json_encode(['status' => 'success', 'message' => 'Product updated']);
+									exit;
+							} catch (Exception $e) {
+									echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+									exit;
+							}
+					}
+
 
             throw new Exception('Invalid action');
         } catch (Exception $e) {
@@ -977,50 +992,58 @@ $(function(){
         }
     });
 
-    $("#editProductForm").submit(function(e){
-        e.preventDefault();
+		$("#editProductForm").submit(function(e){
+				e.preventDefault();
 
-        var form = this;
-        var productId = form.product_id.value;
-        
-        // Prepare base data
-        var postData = {
-            action: 'edit_product',
-            product_id: productId,
-            name: form.name.value,
-            description: form.description.value,
-            price: form.price.value,
-            category_id: form.category_id.value,
-            stock: form.stock.value
-        };
-        
-        // Handle image if changed
-        var file = form.image.files[0];
-        if (file) {
-            var reader = new FileReader();
-            reader.onload = function(evt) {
-                var base64 = evt.target.result.split(',')[1];
-                postData.image_base64 = base64;
-                postData.image_type = file.type;
-                submitEditForm(postData);
-            };
-            reader.readAsDataURL(file);
-        } else {
-            submitEditForm(postData);
-        }
-    });
+				var form = this;
+				var productId = form.product_id.value;
+				
+				// Prepare base data
+				var postData = {
+				    action: 'edit_product',
+				    product_id: productId,
+				    name: form.name.value,
+				    description: form.description.value,
+				    price: form.price.value,
+				    category_id: form.category_id.value
+				};
+				
+				// Handle stock fields
+				if (form.stock.value !== form.stock.defaultValue) {
+				    // Direct stock change (no adjustment)
+				    postData.stock = form.stock.value;
+				} else if (form.stock_adjustment.value) {
+				    // Stock adjustment
+				    postData.stock_adjustment = form.stock_adjustment.value;
+				}
+				
+				// Handle image if changed
+				var file = form.image.files[0];
+				if (file) {
+				    var reader = new FileReader();
+				    reader.onload = function(evt) {
+				        var base64 = evt.target.result.split(',')[1];
+				        postData.image_base64 = base64;
+				        postData.image_type = file.type;
+				        submitEditForm(postData);
+				    };
+				    reader.readAsDataURL(file);
+				} else {
+				    submitEditForm(postData);
+				}
+		});
 
-    function submitEditForm(data) {
-        $.post('', data, function(response){
-            if(response.status === 'success'){
-                alert(response.message);
-                $('#editProductModal').modal('hide');
-                fetchProducts(); // Refresh the products list
-            } else {
-                alert("Error: " + response.message);
-            }
-        }, 'json');
-    }
+	function submitEditForm(data) {
+		  $.post('', data, function(response){
+		      if(response.status === 'success'){
+		          alert(response.message);
+		          $('#editProductModal').modal('hide');
+		          fetchProducts(); // Refresh the products list
+		      } else {
+		          alert("Error: " + response.message);
+		      }
+		  }, 'json');
+	}
 
     const productsContainer = $('#productsContainer');
 
