@@ -98,6 +98,49 @@ $users = $stmt->fetchAll();
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<style>
+    body {
+      background: linear-gradient(to right, #121212, #3a3a3a);
+      color: #eee;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 30px;
+    }
+    .table thead th {
+      color: #0dcaf0;
+    }
+    .btn-primary {
+      background: linear-gradient(to right, #0dcaf0, #198754);
+      border: none;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(to right, #198754, #0dcaf0);
+    }
+    .modal-content {
+      background-color: #2c2c2c;
+      color: #eee;
+      border: 1px solid #444;
+    }
+    .form-control {
+      background-color: #3a3a3a;
+      color: #eee;
+      border: 1px solid #555;
+      border-radius: 30px;
+      padding: 10px 16px;
+      font-size: 15px;
+    }
+    .form-control::placeholder {
+      color: #aaa;
+    }
+    .is-invalid {
+      border-color: #dc3545 !important;
+    }
+    .invalid-feedback {
+      color: #dc3545;
+      font-size: 0.85em;
+      margin-top: 5px;
+    }
+  </style>
 </head>
 <?php include "../includes/header.php"; ?>
 <body class="bg-dark text-light">
