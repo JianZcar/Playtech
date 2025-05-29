@@ -37,7 +37,6 @@ $fname = $stmt->fetchColumn();
                         <i class="bi bi-person-circle"></i> <?= htmlspecialchars($fname) ?>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark" aria-labelledby="profileDropdown">
-                        <li><a class="dropdown-item" href="settings.php"><i class="bi bi-gear"></i> Settings</a></li>
                         <li><a class="dropdown-item" href="../../user/logout.php"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
                     </ul>
                 </li>
