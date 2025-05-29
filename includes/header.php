@@ -24,21 +24,28 @@ $fname = $stmt->fetchColumn();
         </button>
 
         <div class="collapse navbar-collapse" id="navbarNavDropdown">
-						 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-								<li class="nav-item">
-										<a class="nav-link" href="/../dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
-								</li>
-								<li class="nav-item">
-											<a class="nav-link" href="/../products"><i class="bi bi-shop"></i> Store </a>
-								</li>
-								<li class="nav-item">
-										<a class="nav-link" href="/../cart"><i class="bi bi-cart3"></i> Cart</a>
-								</li>
-								<li class="nav-item">
-										<a class="nav-link" href="/../orders"><i class="bi bi-receipt-cutoff"></i> Orders</a>
-								</li>
-						</ul>
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link" href="../dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="../products"><i class="bi bi-shop"></i> Store</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="../cart"><i class="bi bi-cart3"></i> Cart</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="../orders"><i class="bi bi-receipt-cutoff"></i> Orders</a>
+                </li>
+            </ul>
+
             <ul class="navbar-nav">
+                <!-- About Us link -->
+                <li class="nav-item">
+                    <a class="nav-link" href="../about/about.php"><i class="bi bi-info-circle"></i> About Us</a>
+                </li>
+
+                <!-- Profile dropdown -->
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown">
                         <i class="bi bi-person-circle"></i> <?= htmlspecialchars($fname) ?>
@@ -52,5 +59,3 @@ $fname = $stmt->fetchColumn();
         </div>
     </div>
 </nav>
-
-
